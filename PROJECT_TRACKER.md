@@ -15,29 +15,29 @@
 
 ## Status overview
 
-| Phase | Name | Tasks | Done | Rework | Todo |
-|---|---|---|---|---|---|
-| 0 | Foundation & Decisions | 12 | 10 | 0 | 1 |
-| 1 | Source 1 - Azure SQL (initial + incremental) | 12 | 0 | 1 | 11 |
-| 2 | Source 2 - Position Files (good + bad) | 7 | 0 | 0 | 7 |
-| 3 | Source 3 - Streaming Trade Events | 7 | 0 | 0 | 7 |
-| 4 | Source 4 - REST FX Rates | 5 | 0 | 0 | 5 |
-| 5 | Source Systems Demo Pack | 6 | 0 | 0 | 6 |
-| 6 | YAML Specification & Framework Core | 6 | 0 | 0 | 6 |
-| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 0 | 8 |
-| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 0 | 6 |
-| 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 0 | 6 |
-| 10 | Gold Data Products | 6 | 0 | 0 | 6 |
-| 11 | Consumption | 3 | 0 | 0 | 3 |
-| 12 | Orchestration | 4 | 0 | 0 | 4 |
-| 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 4 |
-| 14 | Governance, Security & Lineage | 4 | 0 | 0 | 4 |
-| 15 | Reconciliation & Testing | 5 | 0 | 0 | 5 |
-| 16 | Deployment | 3 | 0 | 0 | 3 |
-| 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 5 |
-| | **TOTAL** | **109** | **10** | **1** | **97** |
+| Phase | Name | Tasks | Done | Rework | Blocked | Todo |
+|---|---|---|---|---|---|---|
+| 0 | Foundation & Decisions | 12 | 10 | 0 | 1 | 1 |
+| 1 | Source 1 - Azure SQL (initial + incremental) | 12 | 0 | 1 | 0 | 11 |
+| 2 | Source 2 - Position Files (good + bad) | 7 | 0 | 0 | 0 | 7 |
+| 3 | Source 3 - Streaming Trade Events | 7 | 0 | 0 | 0 | 7 |
+| 4 | Source 4 - REST FX Rates | 5 | 0 | 0 | 0 | 5 |
+| 5 | Source Systems Demo Pack | 6 | 0 | 0 | 0 | 6 |
+| 6 | YAML Specification & Framework Core | 6 | 0 | 0 | 0 | 6 |
+| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 0 | 0 | 8 |
+| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 0 | 0 | 6 |
+| 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 0 | 0 | 6 |
+| 10 | Gold Data Products | 6 | 0 | 0 | 0 | 6 |
+| 11 | Consumption | 3 | 0 | 0 | 0 | 3 |
+| 12 | Orchestration | 4 | 0 | 0 | 0 | 4 |
+| 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 4 |
+| 14 | Governance, Security & Lineage | 4 | 0 | 0 | 0 | 4 |
+| 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 5 |
+| 16 | Deployment | 3 | 0 | 0 | 0 | 3 |
+| 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 0 | 5 |
+| | **TOTAL** | **109** | **10** | **1** | **1** | **97** |
 
-**Verified complete: 10/109 tasks.** (Only items verified on 2026-11-20 are marked done.)
+**Verified complete: 10/109 tasks.** (Phase 0 verified 2026-11-20; one task is blocked on the user.)
 
 ## Demo scenario this plan builds toward
 
