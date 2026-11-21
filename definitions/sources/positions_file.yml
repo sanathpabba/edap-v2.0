@@ -1,0 +1,26 @@
+# Source definition: daily position extract (file source).
+source_system: PORTFOLIO_SYS_FILES
+source_type: file
+ingestion_method: file_arrival          # Auto Loader / file trigger on the inbound folder
+landing_path: landing/positions/inbound
+processed_path: landing/positions/processed
+quarantine_path: landing/positions/quarantine
+archive_path: landing/positions/archive
+file_pattern: "positions_{YYYYMMDD}(_v{N})?.csv"
+format: csv
+header: true
+delimiter: ","
+business_key: [position_id]
+columns:                                  # source names (legacy-style); canonical names come from the mapping YAML
+  position_id: string
+  position_date: string                   # read as string in Bronze; validity is a DQ rule
+  portfolio_ref: string
+  instrument_code: string
+  position_qty: string                    # string in Bronze so bad values are preserved, not dropped
+  avg_cost: string
+  market_value: string
+  ccy: string
+  source_system: string
+corrected_resend: "same name with _v2 suffix replaces a quarantined file"
+owner: portfolio-data-owner
+sensitivity: synthetic

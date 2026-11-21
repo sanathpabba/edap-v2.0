@@ -1,0 +1,19 @@
+{
+  "scenario": "d0",
+  "dry_run": false,
+  "outbox_rows_published": 10163,
+  "of_which_carried_from_previous_scenario(late)": 0,
+  "held_back_for_next_scenario": 102,
+  "duplicates_sent": 101,
+  "out_of_order_moved": 203,
+  "malformed_sent": {
+    "missing_trade_id": 2,
+    "bad_timestamp": 2,
+    "negative_quantity": 2,
+    "not_json": 2,
+    "unknown_event_type": 2,
+    "unknown_trade": 2
+  },
+  "total_messages_sent": 10276,
+  "sent_confirmed": 10276
+}

@@ -1,0 +1,28 @@
+# Source definition: trade lifecycle events on Azure Event Hubs (Kafka-compatible).
+source_system: TRADING_EVENTS
+source_type: stream
+ingestion_method: structured_streaming
+connection:
+  namespace_secret: eventhub-namespace
+  eventhub_secret: eventhub-name
+  listen_connection_secret: eventhub-listen-connection-string
+format: json
+event_time_column: event_timestamp
+business_key: [event_id]
+partition_key: trade_id
+payload:                                    # spec-style names (differs from SQL legacy names on purpose)
+  event_id: string
+  trade_id: string
+  instrument_id: string
+  portfolio_id: string
+  counterparty_id: string
+  trade_type: string                        # BUY | SELL
+  quantity: double
+  price: double
+  currency: string
+  event_type: string                        # TRADE_EXECUTED | TRADE_AMENDED | TRADE_CANCELLED | TRADE_SETTLED | TRADE_FAILED
+  event_timestamp: string                   # ISO-8601 UTC
+known_stream_conditions: [duplicates, out_of_order, late_arriving, malformed]
+checkpoint_path: landing/_checkpoints/trade_events
+owner: trading-data-owner
+sensitivity: synthetic

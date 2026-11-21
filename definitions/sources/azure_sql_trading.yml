@@ -1,0 +1,46 @@
+# Source definition: Azure SQL "trading + reference" system. Read by the ingestion framework (Phase 7).
+source_system: AZURE_SQL_TRADING
+source_type: relational
+connection:
+  server_secret: sql-server-name          # Key Vault secret names only - no values in YAML
+  database_secret: sql-database-name
+  user_secret: sql-admin-user
+  password_secret: sql-admin-password
+ingestion_method: jdbc_batch
+schedule: daily
+objects:
+  - name: reference.instruments
+    business_key: [sec_code]
+    load_type: incremental
+    watermark_column: last_updated_ts
+    columns: {sec_code: string, sec_name: string, sec_type: string, ccy: string, exchange: string, ticker: string, isin: string, sector: string, country: string, contract_size: decimal(18,6), is_active: boolean, created_ts: timestamp, last_updated_ts: timestamp}
+  - name: reference.portfolios
+    business_key: [book_cd]
+    load_type: incremental
+    watermark_column: last_updated_ts
+    columns: {book_cd: string, book_name: string, business_unit: string, base_ccy: string, region: string, is_active: boolean, created_ts: timestamp, last_updated_ts: timestamp}
+  - name: reference.accounts
+    business_key: [acct_ref]
+    load_type: incremental
+    watermark_column: last_updated_ts
+    columns: {acct_ref: string, acct_name: string, acct_type: string, ccy: string, book_cd: string, custodian: string, is_active: boolean, created_ts: timestamp, last_updated_ts: timestamp}
+  - name: reference.counterparties
+    business_key: [cpty_code]
+    load_type: incremental
+    watermark_column: last_updated_ts
+    columns: {cpty_code: string, cpty_name: string, cpty_type: string, country: string, risk_category: string, credit_rating: string, lei: string, is_active: boolean, created_ts: timestamp, last_updated_ts: timestamp}
+  - name: source.trades
+    business_key: [trade_no]
+    load_type: incremental
+    watermark_column: last_updated_ts
+    columns: {trade_no: string, trade_dt: date, trade_ts: timestamp, settle_dt: date, sec_code: string, book_cd: string, cpty_code: string, acct_ref: string, side: string, qty: decimal(18,4), price: decimal(18,6), trade_ccy: string, gross_amt: decimal(22,2), commission: decimal(18,2), fees: decimal(18,2), net_amt: decimal(22,2), trade_status: string, version: int, trader: string, strategy: string, created_ts: timestamp, last_updated_ts: timestamp}
+  - name: source.trade_event_outbox     # source-side outbox feeding the streaming source; not ingested to Bronze
+    ingest: false
+master_ids:
+  sec_code: "INST#####"
+  book_cd: "PORT####"
+  cpty_code: "CPTY####"
+  acct_ref: "ACC#####"
+  trade_no: "TRD#######"
+owner: trading-data-owner
+sensitivity: synthetic

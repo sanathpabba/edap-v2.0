@@ -1,0 +1,82 @@
+{
+  "scenario": "d2",
+  "as_of": "2026-11-18",
+  "good_rows": 1312,
+  "files": {
+    "positions_20261118.csv": {
+      "rows": 1312,
+      "sha256_16": "86deaf2cada2da78",
+      "kind": "bad",
+      "folder": "d2_bad"
+    },
+    "positions_20261118_v2.csv": {
+      "rows": 1312,
+      "sha256_16": "adc13f2822308f3f",
+      "kind": "corrected re-send",
+      "folder": "d2_fixed"
+    }
+  },
+  "defects_injected": {
+    "missing_portfolio": 10,
+    "duplicate_position_id": 6,
+    "invalid_quantity": 8,
+    "invalid_currency": 7,
+    "unknown_instrument": 5,
+    "invalid_date": 5
+  },
+  "defect_rows": {
+    "missing_portfolio": [
+      "POS-20261118-0633",
+      "POS-20261118-0707",
+      "POS-20261118-0980",
+      "POS-20261118-0939",
+      "POS-20261118-0680",
+      "POS-20261118-0913",
+      "POS-20261118-1027",
+      "POS-20261118-1058",
+      "POS-20261118-1023",
+      "POS-20261118-0209"
+    ],
+    "duplicate_position_id": [
+      "POS-20261118-0383 (copy of POS-20261118-0384)",
+      "POS-20261118-1143 (copy of POS-20261118-1144)",
+      "POS-20261118-0948 (copy of POS-20261118-0949)",
+      "POS-20261118-0654 (copy of POS-20261118-0655)",
+      "POS-20261118-0442 (copy of POS-20261118-0443)",
+      "POS-20261118-0888 (copy of POS-20261118-0889)"
+    ],
+    "invalid_quantity": [
+      "POS-20261118-0568",
+      "POS-20261118-0892",
+      "POS-20261118-0560",
+      "POS-20261118-0765",
+      "POS-20261118-0864",
+      "POS-20261118-0757",
+      "POS-20261118-0612",
+      "POS-20261118-0268"
+    ],
+    "invalid_currency": [
+      "POS-20261118-1211",
+      "POS-20261118-0846",
+      "POS-20261118-1249",
+      "POS-20261118-0536",
+      "POS-20261118-0175",
+      "POS-20261118-0789",
+      "POS-20261118-0857"
+    ],
+    "unknown_instrument": [
+      "POS-20261118-1301",
+      "POS-20261118-0399",
+      "POS-20261118-0039",
+      "POS-20261118-0691",
+      "POS-20261118-1206"
+    ],
+    "invalid_date": [
+      "POS-20261118-0491",
+      "POS-20261118-0089",
+      "POS-20261118-0647",
+      "POS-20261118-0646",
+      "POS-20261118-0567"
+    ]
+  }
+}

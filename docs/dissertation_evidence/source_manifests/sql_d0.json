@@ -1,0 +1,8 @@
+{
+  "scenario": "d0",
+  "as_of": "2026-11-16",
+  "run_start_utc": "2026-11-21 00:52:30",
+  "trades_inserted": 5000,
+  "ref_rows_inserted": 200,
+  "outbox_rows": 10265
+}

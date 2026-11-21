@@ -1,0 +1,12 @@
+{
+  "scenario": "d0",
+  "as_of": "2026-11-16",
+  "good_rows": 1296,
+  "files": {
+    "positions_20261116.csv": {
+      "rows": 1296,
+      "sha256_16": "fe551fbb53703260",
+      "kind": "good"
+    }
+  }
+}

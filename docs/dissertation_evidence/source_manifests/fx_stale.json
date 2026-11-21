@@ -1,0 +1,16 @@
+{
+  "file": "fx_rates_20261121_stale.json",
+  "requested": "2026-11-21",
+  "returned_date": "2026-11-20",
+  "stale": true,
+  "rates": {
+    "AUD": 1.5002,
+    "CAD": 1.4307,
+    "CHF": 0.83922,
+    "EUR": 0.90992,
+    "GBP": 0.76192,
+    "HKD": 7.8389,
+    "JPY": 158.64,
+    "SGD": 1.2884
+  }
+}

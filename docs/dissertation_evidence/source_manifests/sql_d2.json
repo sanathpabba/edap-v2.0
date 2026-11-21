@@ -1,0 +1,31 @@
+{
+  "scenario": "d2",
+  "as_of": "2026-11-18",
+  "watermark_ts_utc": "2026-11-21 00:54:03",
+  "trades_inserted": 90,
+  "trades_updated": 78,
+  "updates_by_kind": {
+    "lifecycle": 68,
+    "cancel": 4,
+    "amend": 8,
+    "late": 6
+  },
+  "ref_rows_updated": 2,
+  "ref_changes": [
+    "CPTY0018:BBB->A",
+    "CPTY0030:AA->AAA"
+  ],
+  "outbox_rows": 155,
+  "new_trade_range": [
+    "TRD0005121",
+    "TRD0005210"
+  ],
+  "late_update_trades": [
+    "TRD0001535",
+    "TRD0000806",
+    "TRD0002137",
+    "TRD0004560",
+    "TRD0003230",
+    "TRD0002495"
+  ]
+}

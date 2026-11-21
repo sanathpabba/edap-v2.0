@@ -1,0 +1,38 @@
+# Synthetic data generation settings (all sources). Change here, not in code.
+seed: 20261116
+scenario_dates:            # business dates of the three demo scenarios
+  d0: 2026-11-16           # initial load (Mon)
+  d1: 2026-11-17           # incremental 1 (Tue)
+  d2: 2026-11-18           # incremental 2 (Wed) - includes a bad position file
+history_start: 2024-11-18
+currencies: [USD, EUR, GBP, JPY, CHF, AUD, CAD, SGD, HKD]
+volumes:
+  instruments: 100
+  portfolios: 20
+  accounts: 30
+  counterparties: 50
+  trades: 5000
+instrument_mix: {EQUITY: 45, BOND: 25, FX: 10, COMMODITY: 10, DERIVATIVE: 10}
+trades:
+  cancel_rate: 0.04
+  fail_rate: 0.02
+  amend_rate_history: 0.06
+  d0_pending_rate: 0.30          # share of D0-dated trades still NEW (not yet executed)
+incremental:
+  d1: {new_trades: 120, cancels: 5, amends: 12, late_updates: 0, ref_updates: 3}
+  d2: {new_trades: 90, cancels: 4, amends: 8, late_updates: 6, ref_updates: 2}
+position_file_defects:           # injected into the D2 bad file
+  missing_portfolio: 10
+  duplicate_position_id: 6
+  invalid_quantity: 8
+  invalid_currency: 7
+  unknown_instrument: 5
+  invalid_date: 5
+events:
+  duplicate_rate: 0.01
+  out_of_order_rate: 0.02
+  late_arriving_rate: 0.01
+  malformed_count: {d0: 12, d1: 3, d2: 3}
+fx:
+  api_base: https://api.frankfurter.dev/v1
+  base_currency: USD

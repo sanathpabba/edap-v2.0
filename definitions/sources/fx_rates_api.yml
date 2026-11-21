@@ -1,0 +1,18 @@
+# Source definition: FX reference rates from a public REST API (ECB reference rates via frankfurter.dev). No credentials.
+source_system: FX_REST_API
+source_type: rest_api
+ingestion_method: scheduled_api_pull
+api_base: https://api.frankfurter.dev/v1
+base_currency: USD
+symbols: [EUR, GBP, JPY, CHF, AUD, CAD, SGD, HKD]
+endpoints:
+  history: "{start}..{end}?base=USD&symbols=..."
+  daily:   "{date}?base=USD&symbols=..."
+retry: {attempts: 3, backoff_seconds: 2}
+landing_path: landing/fx_rates/inbound
+landing_format: json
+envelope: [request, requested_date, fetched_at_utc, http_status, stale, response]   # raw response preserved inside
+stale_rule: "stale = response.date != requested_date (weekend/holiday returns previous business day)"
+business_key: [rate_date, base_currency, quote_currency]
+owner: market-data-owner
+sensitivity: public

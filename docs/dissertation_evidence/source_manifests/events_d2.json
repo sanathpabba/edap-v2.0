@@ -1,0 +1,16 @@
+{
+  "scenario": "d2",
+  "dry_run": false,
+  "outbox_rows_published": 156,
+  "of_which_carried_from_previous_scenario(late)": 1,
+  "held_back_for_next_scenario": 0,
+  "duplicates_sent": 1,
+  "out_of_order_moved": 3,
+  "malformed_sent": {
+    "missing_trade_id": 1,
+    "bad_timestamp": 1,
+    "negative_quantity": 1
+  },
+  "total_messages_sent": 160,
+  "sent_confirmed": 160
+}
