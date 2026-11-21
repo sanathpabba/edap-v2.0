@@ -2,7 +2,19 @@
 import os
 import yaml
 
-_ROOT = os.environ.get("EDAP_PROJECT_ROOT") or os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+def _resolve_root():
+    """Where definitions/ and pipelines/ live: $EDAP_PROJECT_ROOT, else the repository checkout, else the copy bundled inside the installed wheel."""
+    if os.environ.get("EDAP_PROJECT_ROOT"):
+        return os.environ["EDAP_PROJECT_ROOT"]
+    package_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+    repo = os.path.dirname(package_dir)
+    if os.path.isdir(os.path.join(repo, "definitions")):
+        return repo
+    bundled = os.path.join(package_dir, "_resources")
+    return bundled if os.path.isdir(os.path.join(bundled, "definitions")) else repo
+
+
+_ROOT = _resolve_root()
 
 
 def project_root():

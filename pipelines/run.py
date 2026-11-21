@@ -1,11 +1,7 @@
-"""Run a pipeline: an asset class (or ALL), one layer, one mode. Executes the ordinal step files in order for each item.
+"""Repository entry point for a pipeline run; the logic lives in edap_framework.cli (installed as the console command `edap-run`).
 
-  python pipelines/run.py --asset-class Equities --layer bronze --mode Routine
-  python pipelines/run.py --asset-class Equities --layer silver --mode Adhoc --item trade --from-ts 2026-11-17
-  python pipelines/run.py --asset-class Equities --layer bronze --mode Routine --steps 1-5 --dry-run
-  python pipelines/run.py --asset-class ALL --layer silver --mode Routine        # Common first, then every asset class
-Adhoc/extra parameters: --from-ts --to-ts --date --fx-mode --rescan --param name=value, or --extra "date=2026-11-17 fx_mode=daily"."""
-import argparse
+  python pipelines/run.py --asset-class Equities --layer bronze --mode Routine [--item file_positions] [--steps 1-5] [--dry-run]
+See `python pipelines/run.py --help`."""
 import os
 import sys
 
@@ -13,65 +9,12 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
 os.environ.setdefault("EDAP_PROJECT_ROOT", ROOT)
 sys.path.insert(0, ROOT)
 
-from edap_framework.core import config  # noqa: E402
-from edap_framework.pipeline.context import PipelineContext  # noqa: E402
-from edap_framework.pipeline.sequence import run_sequence  # noqa: E402
-
-LAYERS = ["landing", "bronze", "silver", "gold"]
-
-
-def parse_args(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--asset-class", required=True, help="Equities | FixedIncome | FX | Commodities | Common | ALL")
-    ap.add_argument("--layer", required=True, choices=LAYERS)
-    ap.add_argument("--mode", default="Routine", choices=["Routine", "Adhoc"])
-    ap.add_argument("--item", action="append", help="limit to these items (repeatable), e.g. file-loads/positions or trade")
-    ap.add_argument("--steps", help="step range, e.g. 4-7 or 5")
-    ap.add_argument("--dry-run", action="store_true", help="print the plan, run nothing (no Spark needed)")
-    ap.add_argument("--run-id", default=None, help="Databricks job run id (jobs pass {{job.run_id}})")
-    ap.add_argument("--scenario", default=None, help="label for the run log (d0/d1/d2)")
-    ap.add_argument("--from-ts"); ap.add_argument("--to-ts"); ap.add_argument("--date"); ap.add_argument("--fx-mode", choices=["history", "daily"])
-    ap.add_argument("--rescan", action="store_true"); ap.add_argument("--param", action="append", default=[], help="Gold what-if override name=value")
-    ap.add_argument("--extra", default="", help='space-separated key=value pairs (for jobs): "date=2026-11-17 from_ts=2026-11-17"')
-    return ap.parse_args(argv)
-
-
-def build_params(a):
-    p = {k: v for k, v in {"from_ts": a.from_ts, "to_ts": a.to_ts, "date": a.date, "fx_mode": a.fx_mode}.items() if v}
-    if a.rescan:
-        p["rescan"] = True
-    pp = dict(x.split("=", 1) for x in a.param)
-    for kv in a.extra.split():
-        k, v = kv.split("=", 1)
-        (pp if k.startswith("param.") else p)[k.replace("param.", "")] = v
-    if pp:
-        p["product_params"] = pp
-    return p
-
-
-def pipelines_for(name, layer):
-    allac = config.list_asset_classes()
-    chosen = allac if name.upper() == "ALL" else [config.get_asset_class(name)]
-    chosen = sorted(chosen, key=lambda a: (a.prefix != "common", a.folder))          # Common first
-    return [a for a in chosen if layer in a.items]
-
-
-def main(argv=None):
-    a = parse_args(argv)
-    first, last = 1, 99
-    if a.steps:
-        first, _, last = a.steps.partition("-")
-        first, last = int(first), int(last or first)
-    spark = env = None
-    if not a.dry_run:
-        from pyspark.sql import SparkSession
-        spark, env = SparkSession.builder.getOrCreate(), config.load_env()
-    total = 0
-    for ac in pipelines_for(a.asset_class, a.layer):
-        ctx = PipelineContext(ac, a.layer, a.mode, spark=spark, env=env, scenario=a.scenario, params=build_params(a), run_id=a.run_id)
-        total += run_sequence(ctx, set(a.item) if a.item else None, first, last, a.dry_run)
-    print("%d step executions%s" % (total, " (dry run)" if a.dry_run else ""))
-
+from edap_framework.cli import LAYERS, build_params, main, parse_args, pipelines_for  # noqa: E402,F401
+from edap_framework.pipeline.common import PipelineHalt  # noqa: E402
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except PipelineHalt as halt:
+        print("PIPELINE HALTED: %s" % halt, file=sys.stderr)
+        sys.exit(2)

@@ -49,7 +49,8 @@ def _yaml_files():
 
 def _step_functions(layer):
     """Function names defined (or aliased) in edap_framework/pipeline/<layer>_steps.py, read with ast (no imports)."""
-    path = os.path.join(config.project_root(), "edap_framework", "pipeline", "%s_steps.py" % layer)
+    here = os.path.join(config.project_root(), "edap_framework", "pipeline")             # a copy under the project root (tests use this)
+    path = os.path.join(here if os.path.isdir(here) else os.path.join(os.path.dirname(__file__), "..", "pipeline"), "%s_steps.py" % layer)
     tree = ast.parse(open(path).read())
     names = {n.name for n in tree.body if isinstance(n, ast.FunctionDef)}
     names |= {t.id for n in tree.body if isinstance(n, ast.Assign) for t in n.targets if isinstance(t, ast.Name)}
@@ -378,3 +379,15 @@ def validate():
             if set(ls.get("file_checks", {}).get("header", [])) != set(sc):
                 err("landing/%s.yml: file_checks.header differs from the source contract columns" % item)
     return errors, warns
+
+
+def main():
+    """Console command `edap-validate`: cross-check every definition and the pipelines tree (offline)."""
+    import sys
+    errors, warns = validate()
+    for w in warns:
+        print("WARN ", w)
+    for e in errors:
+        print("ERROR", e)
+    print("%d error(s), %d warning(s)" % (len(errors), len(warns)))
+    sys.exit(1 if errors else 0)

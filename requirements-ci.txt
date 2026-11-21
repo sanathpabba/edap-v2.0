@@ -1,0 +1,5 @@
+# Minimal set for CI: unit tests, definition validator and wheel build (no ODBC/Azure SDKs needed)
+pytest
+build
+pyyaml
+requests

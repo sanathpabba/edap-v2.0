@@ -23,7 +23,7 @@
 | 3 | Source 3 - Streaming Trade Events | 7 | 7 | 0 | 0 | 0 | 0 |
 | 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
 | 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
-| 6 | YAML Specification & Framework Core | 9 | 0 | 6 | 0 | 0 | 3 |
+| 6 | YAML Specification & Framework Core | 9 | 0 | 7 | 0 | 0 | 2 |
 | 7 | Landing & Bronze (metadata-driven) | 9 | 0 | 7 | 0 | 0 | 2 |
 | 8 | Data Quality (DQX) - Bronze & Silver | 9 | 0 | 9 | 0 | 0 | 0 |
 | 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
@@ -33,11 +33,11 @@
 | 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 0 | 4 |
 | 14 | Governance, Security & Lineage | 4 | 0 | 4 | 0 | 0 | 0 |
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
-| 16 | Deployment | 3 | 0 | 0 | 0 | 0 | 3 |
+| 16 | Deployment | 4 | 0 | 3 | 0 | 0 | 1 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 2 | 0 | 0 | 3 |
-| | **TOTAL** | **116** | **48** | **43** | **0** | **0** | **25** |
+| | **TOTAL** | **117** | **48** | **47** | **0** | **0** | **22** |
 
-**Verified complete: 48/116 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
+**Verified complete: 48/117 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
 ## Demo scenario this plan builds toward
 
@@ -177,8 +177,8 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | FWK-03 | Run context | run_id/batch_id, logging, environment | 📋 TODO | P0 | FWK-02 | Unit tests |
 | FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
 | FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | deployment/unity_catalog_setup.sql (catalog + 10 schemas); not run |
-| FWK-06 | Packaging | Build wheel, install on cluster, import test | 📋 TODO | P1 | FWK-02 | `import edap_framework` on both workspaces |
-| FWK-07 | Asset-class pipeline structure | pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/ (one folder per table) for Equities, FixedIncome, FX, Commodities plus Common (landing + shared entities); asset-class YAMLs; ${ac} templating; routing by instrument | 🔄 BUILT, NOT VALIDATED | P0 | FWK-02 | definitions/asset_classes/*.yml, pipelines/ (1,190 step files, one folder per table), docs/architecture/pipelines.md; 65 offline tests incl. routing/overlap/negative cases; not run on Databricks |
+| FWK-06 | Packaging | Build wheel, install on cluster, import test | 🔄 BUILT, NOT VALIDATED | P1 | FWK-02 | pyproject.toml + tools/build_wheel.py: wheel carries code, 69 YAML definitions and 1,191 pipeline files, console commands edap-run/edap-validate; built, installed in a clean virtualenv outside the repo and edap-validate + edap-run --dry-run pass (integration test); install on a Databricks cluster still to do |
+| FWK-07 | Asset-class pipeline structure | pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/ (one folder per table) for Equities, FixedIncome, FX, Commodities plus Common (landing + shared entities); asset-class YAMLs; ${ac} templating; routing by instrument | 🔄 BUILT, NOT VALIDATED | P0 | FWK-02 | definitions/asset_classes/*.yml, pipelines/ (1,190 step files, one folder per table), docs/architecture/pipelines.md; 75 offline tests incl. routing/overlap/negative cases; not run on Databricks |
 | FWK-08 | Ordinal step files + sequence runner | 8-10 numbered step files per table and mode, each calling one framework function; pipelines/run.py executes them in order per item; dry-run plan; tools/generate_pipelines.py regenerates the tree | 🔄 BUILT, NOT VALIDATED | P0 | FWK-07 | edap_framework/pipeline/{context,sequence,landing_steps,bronze_steps,silver_steps,gold_steps}.py; dry-run and step-wiring tests pass offline; not run on Databricks |
 | FWK-09 | Routine vs Adhoc behaviours | Same steps, mode-aware: Routine incremental/scheduled; Adhoc initial load, backfill, replay (no duplicates), rebuild, what-if parameters | 🔄 BUILT, NOT VALIDATED | P1 | FWK-08 | Documented in docs/architecture/pipelines.md; replay/rebuild logic in bronze/silver/gold step functions; needs a run to verify |
 
@@ -321,9 +321,10 @@ _Bundles and CI._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| DEP-01 | Declarative Automation Bundle | Jobs/pipelines/dashboards as code | 📋 TODO | P1 | ORC-04 | `bundle deploy` to v2-0 |
+| DEP-01 | Declarative Automation Bundle | Jobs/pipelines/dashboards as code | 🔄 BUILT, NOT VALIDATED | P1 | ORC-04 | databricks.yml (wheel artifact, credential-safe sync excludes) + generated deployment/jobs.yml (python_wheel_task); jobs parse as valid edap-run commands (unit test); bundle validate/deploy on v2-0 still to do |
 | DEP-02 | Environment configs | dev/test/prod overlays | 📋 TODO | P2 | DEP-01 | Overlay switch |
-| DEP-03 | CI | Lint + tests on push | 📋 TODO | P2 | FND-09 | CI run |
+| DEP-03 | CI | Lint + tests on push | 🔄 BUILT, NOT VALIDATED | P2 | FND-09 | .github/workflows/ci.yml (validate, generated-files check, tests, wheel build + clean-venv smoke test, Python 3.9 and 3.11) and release.yml (tag release, manual deploy); YAML valid; not yet run on GitHub |
+| DEP-04 | Build, publish and install pipeline for the wheel | Versioned wheel build with content verification, publish to a UC volume, install on clusters/serverless/notebooks, release by tag | 🔄 BUILT, NOT VALIDATED | P1 | FWK-06 | tools/build_wheel.py, publish_wheel.sh, install_on_cluster.sh, Makefile, docs/runbooks/build_and_deploy.md; build verified locally; publish/install on Databricks not yet run |
 
 ---
 

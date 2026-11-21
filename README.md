@@ -14,10 +14,16 @@ Principle: **everything configurable lives in `definitions/` (YAML); `edap_frame
 | `pipelines/` | the pipelines: `<AssetClass>/<layer>/<table>/<Routine\|Adhoc>/NN_<step>.py` - every numbered file calls one framework function; `run.py` executes them in order |
 | `runners/` | utilities: definition validator, SQL-table scaffold, reference-data and governance runners |
 | `source_generators/` | synthetic source systems (Azure SQL, position files, Event Hubs events, FX REST API) with D0/D1/D2 demo scenarios |
-| `deployment/` | Unity Catalog setup SQL, Databricks job definitions |
+| `deployment/` | Unity Catalog setup SQL, generated Databricks job definitions (wheel-based) |
+| `tools/` | pipeline-tree generator, wheel build, publish-to-Databricks and install-on-cluster scripts |
+| `.github/workflows/` | CI (validate, test, build wheel) and release/deploy |
 | `docs/` | architecture decisions, runbooks, dissertation evidence, viva material |
 | `tests/` | unit tests (run offline) |
 | `PROJECT_TRACKER.md` | phase-wise tracker with evidence per task |
+
+## Package, install and deploy
+`make ci` validates, tests and builds `dist/edap_framework-<version>-py3-none-any.whl` (code + definitions + pipelines, console commands `edap-run` and `edap-validate`).
+`make publish` uploads it to a Unity Catalog volume; jobs install it as a `python_wheel_task`. See `docs/runbooks/build_and_deploy.md`.
 
 ## Run order
 `source_generators` (D0/D1/D2) -> `pipelines/run.py --asset-class ALL` for `landing` (Common), `bronze`, `silver`, `gold` -> `runners/governance_apply.py`

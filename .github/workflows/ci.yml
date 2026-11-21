@@ -1,0 +1,58 @@
+# Continuous integration: validate definitions, run unit tests, build the wheel and smoke-test it in a clean environment.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.11"]        # 3.9 = local dev, 3.11 = Databricks serverless environment
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+          cache-dependency-path: requirements-ci.txt
+
+      - name: Install
+        run: pip install -r requirements-ci.txt
+
+      - name: Validate definitions and pipeline tree
+        run: python runners/validate_definitions.py
+
+      - name: Generated files are up to date (pipelines tree and jobs)
+        run: |
+          python tools/generate_pipelines.py
+          git diff --exit-code -- pipelines deployment/jobs.yml
+
+      - name: Unit tests
+        run: python -m pytest tests -q
+
+      - name: Build wheel
+        run: python tools/build_wheel.py --version-suffix "$(git rev-parse --short HEAD)"
+
+      - name: Smoke-test the wheel in a clean virtualenv (away from the repository)
+        run: |
+          python -m venv /tmp/clean
+          /tmp/clean/bin/pip install dist/edap_framework-*.whl
+          cd /tmp
+          env -u EDAP_PROJECT_ROOT /tmp/clean/bin/edap-validate
+          env -u EDAP_PROJECT_ROOT /tmp/clean/bin/edap-run --asset-class Equities --layer bronze --mode Routine --dry-run
+
+      - name: Upload wheel
+        if: matrix.python-version == '3.11'
+        uses: actions/upload-artifact@v4
+        with:
+          name: edap-framework-wheel
+          path: dist/*.whl
+          retention-days: 30

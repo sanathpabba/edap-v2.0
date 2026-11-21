@@ -1,0 +1,34 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edap-framework"
+dynamic = ["version"]
+description = "EDAP 2.0: modular, YAML-driven PySpark framework for capital-markets analytical reporting (Landing, Bronze, Silver, Gold, DQX, governance)"
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Sanath Pabba" }]
+# pyspark is provided by Databricks and deliberately not a dependency. DQX is an extra so unit tests and the validator run without it.
+dependencies = ["pyyaml>=6.0", "requests>=2.28"]
+
+[project.optional-dependencies]
+dq = ["databricks-labs-dqx==0.17.2"]
+dev = ["pytest", "build", "pyodbc", "azure-eventhub", "python-dateutil", "databricks-sdk"]
+
+[project.scripts]
+edap-run = "edap_framework.cli:main"
+edap-validate = "edap_framework.core.validator:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "edap_framework.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["edap_framework*"]
+
+# definitions/ and pipelines/ are copied into edap_framework/_resources/ by tools/build_wheel.py so an installed wheel is self-contained
+[tool.setuptools.package-data]
+edap_framework = ["_resources/**/*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

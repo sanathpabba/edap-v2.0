@@ -12,3 +12,4 @@ CREATE SCHEMA IF NOT EXISTS edap.quarantine;
 CREATE SCHEMA IF NOT EXISTS edap.monitoring;
 CREATE SCHEMA IF NOT EXISTS edap.audit;
 CREATE SCHEMA IF NOT EXISTS edap.governance;   -- holds column-mask functions
+CREATE VOLUME IF NOT EXISTS edap.metadata.artifacts COMMENT 'Build artifacts: edap_framework wheels (tools/publish_wheel.sh)';
