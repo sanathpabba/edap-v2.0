@@ -50,12 +50,28 @@ def _registry_known(spark, spec, rescan):
     return set() if rescan else {(r[0], r[1]) for r in spark.sql("SELECT file_name, size_bytes FROM %s" % reg).collect()}
 
 
+def _is_missing_path(exc):
+    text = str(exc)
+    return any(marker in text for marker in ("PathNotFound", "CloudFileNotFoundException", "FileNotFoundException", "does not exist", "NOT_FOUND"))
+
+
+def list_source_drop(spark, spec, env):
+    """Files in the source drop folder. A folder that does not exist yet simply means nothing has been received (not a crash);
+    any other error (permissions, network) still raises."""
+    sd = spec["source_drop"]
+    try:
+        return list(spark_utils.get_dbutils(spark).fs.ls(config.storage_uri(env, sd["container"], sd["path"])))
+    except Exception as exc:                                                    # noqa: BLE001
+        if _is_missing_path(exc):
+            return []
+        raise
+
+
 def scan_source_drop(spark, spec, env, rescan=False):
     """Every file in the source drop, flagged new (not yet registered with the same name+size) or known."""
-    sd = spec["source_drop"]
     known = _registry_known(spark, spec, rescan)
     out = []
-    for f in spark_utils.get_dbutils(spark).fs.ls(config.storage_uri(env, sd["container"], sd["path"])):
+    for f in list_source_drop(spark, spec, env):
         if f.isDir():
             continue
         bdate, ver = parse_name(spec, f.name)

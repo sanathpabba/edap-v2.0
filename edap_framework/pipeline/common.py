@@ -33,6 +33,10 @@ def log_run(ctx, status, rows, details):
                   started_ts=ctx.st.get("started"), finished_ts=dt.datetime.utcnow(), details=details)
 
 
+class PipelineFailure(Exception):
+    """One or more tables failed with an unexpected error. Raised after every other table of the layer has been processed."""
+
+
 class PipelineHalt(Exception):
     """The whole file/batch is wrong or missing: stop the pipeline so downstream layers do not start. Raised after the owner was notified."""
 

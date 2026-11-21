@@ -7,7 +7,9 @@ import os
 import re
 
 from edap_framework.core import config
-from edap_framework.pipeline.common import PipelineHalt
+import traceback
+
+from edap_framework.pipeline.common import PipelineFailure, PipelineHalt
 
 STEP_RX = re.compile(r"^(\d{2})_([a-z0-9_]+)\.py$")
 
@@ -43,7 +45,7 @@ def run_sequence(ctx, only_items=None, first=1, last=99, dry_run=False, out=prin
     wanted = lambda item: not only_items or item in only_items or config.table_folder(ctx.layer, item) in only_items
     items = [i for i in ctx.items if wanted(i)]
     out("== %s | tables: %s" % (ctx.describe(), ", ".join(config.table_folder(ctx.layer, i) for i in items) or "-"))
-    total, halts = 0, []
+    total, halts, failures = 0, [], []
     for item in items:
         ctx.item = item
         folder = config.table_folder(ctx.layer, item)
@@ -63,7 +65,14 @@ def run_sequence(ctx, only_items=None, first=1, last=99, dry_run=False, out=prin
                 out("   !! HALTED at step %02d %s: %s" % (order, name, halt))
                 halts.append("%s/%s: %s" % (ctx.layer, folder, halt))
                 break
+            except Exception as exc:                                        # noqa: BLE001  one table's crash must not stop the independent others
+                out("   !! FAILED at step %02d %s: %s: %s" % (order, name, type(exc).__name__, str(exc)[:400]))
+                out(traceback.format_exc())
+                failures.append("%s/%s step %02d %s: %s: %s" % (ctx.layer, folder, order, name, type(exc).__name__, str(exc)[:200]))
+                break
             total += 1
+    if failures:
+        raise PipelineFailure("%d table(s) failed - %s%s" % (len(failures), " | ".join(failures), ("; also halted: " + " | ".join(halts)) if halts else ""))
     if halts:
         raise PipelineHalt("%d table(s) halted - %s" % (len(halts), " | ".join(halts)))
     return total
