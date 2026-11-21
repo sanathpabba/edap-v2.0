@@ -13,7 +13,7 @@ coalesce nullif concat concat_ws substr trim upper lower try_to_date try_to_time
 max min over partition by order desc asc rows unbounded preceding current row last_value to_date to_timestamp date timestamp string int
 double decimal boolean interval day sequence explode distinct group join on left right cross inner expr uuid sha2 regexp_extract""".split())
 TYPE_RX = re.compile(r"^(string|int|bigint|long|double|float|boolean|date|timestamp|decimal\(\d+,\d+\))$")
-LAYERS = ["landing", "bronze", "silver", "gold"]
+LAYERS = ["landing", "bronze", "silver", "gold", "consumption"]
 # lineage columns the Silver engine adds from Bronze (silver/engine.py BRONZE_LINEAGE); the original Bronze names (_ingest_ts ...) do not exist after mapping
 SILVER_BRONZE_COLUMNS = {"_bronze_file", "_bronze_batch_id", "_landing_batch_id", "_bronze_row_hash", "_bronze_ingest_ts", "_source_system", "_source_object"}
 
@@ -337,6 +337,45 @@ def validate():
                 if k not in p["documentation"]:
                     err("%s: documentation.%s missing" % (f, k))
             done_here.add(item)
+
+    # ---- consumption: metric views and materialized views over the Gold products of the same asset class
+    cons_targets = {}
+    for a in acs:
+        for item in a.items.get("consumption", []):
+            f = "definitions/consumption/%s.yml" % item
+            if not exists(f):
+                err("%s: consumption item %s has no definition" % (a.folder, item)); continue
+            c = config.load_yaml(f, a.variables())
+            fq = "edap.consumption.%s" % c["target"]["table"]
+            if fq in cons_targets:
+                err("%s: target %s also produced by %s" % (f, fq, cons_targets[fq]))
+            cons_targets[fq] = "%s:%s" % (a.folder, item)
+            if c.get("kind") not in ("metric_view", "materialized_view"):
+                err("%s: kind must be metric_view or materialized_view" % f); continue
+            if c["source"] not in gold_targets:
+                err("%s (%s): source %s is not a Gold product" % (f, a.folder, c["source"]))
+            elif gold_targets[c["source"]][0] != a.folder:
+                err("%s (%s): reads another asset class's Gold table %s" % (f, a.folder, c["source"]))
+            for k in ("business_purpose", "grain", "owner", "refresh_pattern", "intended_consumers"):
+                if k not in c.get("documentation", {}):
+                    err("%s: documentation.%s missing" % (f, k))
+            if c["kind"] == "metric_view":
+                mv = c.get("metric_view") or {}
+                dims, meas = [d["name"] for d in mv.get("dimensions", [])], [m["name"] for m in mv.get("measures", [])]
+                if not dims or not meas:
+                    err("%s: a metric view needs dimensions and measures" % f)
+                if len(set(dims + meas)) != len(dims + meas):
+                    err("%s: dimension/measure names must be unique" % f)
+                for m in mv.get("measures", []):
+                    for ref in re.findall(r"MEASURE\(`([^`]+)`\)", m["expr"]):
+                        if ref not in meas:
+                            err("%s: measure %s refers to unknown measure %s" % (f, m["name"], ref))
+                if "$$" in str(mv):
+                    err("%s: metric view YAML must not contain $$" % f)
+            else:
+                sel = ((c.get("materialized_view") or {}).get("select") or "").strip()
+                if not sel.upper().startswith("SELECT") or c["source"] not in sel:
+                    err("%s: materialized_view.select must be a SELECT from %s" % (f, c["source"]))
 
     # ---- governance
     acc = config.load_yaml("definitions/governance/access.yml")

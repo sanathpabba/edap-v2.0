@@ -27,17 +27,17 @@
 | 7 | Landing & Bronze (metadata-driven) | 9 | 0 | 7 | 0 | 0 | 2 |
 | 8 | Data Quality (DQX) - Bronze & Silver | 9 | 0 | 9 | 0 | 0 | 0 |
 | 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
-| 10 | Gold Data Products | 6 | 0 | 6 | 0 | 0 | 0 |
-| 11 | Consumption | 3 | 0 | 0 | 0 | 0 | 3 |
-| 12 | Orchestration | 4 | 0 | 3 | 0 | 0 | 1 |
+| 10 | Gold Data Products | 7 | 0 | 7 | 0 | 0 | 0 |
+| 11 | Consumption | 4 | 0 | 2 | 0 | 0 | 2 |
+| 12 | Orchestration | 4 | 0 | 4 | 0 | 0 | 0 |
 | 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 0 | 4 |
 | 14 | Governance, Security & Lineage | 4 | 0 | 4 | 0 | 0 | 0 |
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 4 | 0 | 3 | 0 | 0 | 1 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 2 | 0 | 0 | 3 |
-| | **TOTAL** | **117** | **50** | **45** | **0** | **0** | **22** |
+| | **TOTAL** | **119** | **50** | **49** | **0** | **0** | **20** |
 
-**Verified complete: 50/117 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
+**Verified complete: 50/119 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
 ## Demo scenario this plan builds toward
 
@@ -247,6 +247,7 @@ _Four reusable products defined in YAML._
 | GLD-04 | P&L / Finance | Finance product | 🔄 BUILT, NOT VALIDATED | P1 | GLD-01 | definitions/gold_products/pnl_finance.yml |
 | GLD-05 | Regulatory/Management | Controlled reporting product | 🔄 BUILT, NOT VALIDATED | P1 | GLD-01 | definitions/gold_products/regulatory_reporting.yml (parameterised threshold, versioned) |
 | GLD-06 | Product documentation | Purpose, grain, owner, consumers, refresh | 🔄 BUILT, NOT VALIDATED | P1 | GLD-02 | documentation block in every product YAML applied as UC comment/tags; docs/architecture/silver_dq_gold_governance.md |
+| CON-04 | Consumption stage per asset class (metric views + materialized views) | Stage after Gold in each asset-class job: 2 metric views and 2 materialized views per asset class, defined in YAML, created/refreshed by step files | 🔄 BUILT, NOT VALIDATED | P0 | GLD-02 | definitions/consumption/, edap_framework/consumption/builder.py, pipeline/consumption_steps.py, 16 objects; validator + tests; not yet created on Databricks |
 
 ---
 
@@ -257,8 +258,9 @@ _At least two channels from governed Gold._
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
 | CON-01 | Databricks AI/BI dashboard | Trade and position/exposure views | 📋 TODO | P0 | GLD-03 | Dashboard link + screenshot |
-| CON-02 | Second channel | File extract or DB delivery from consumption YAML | 📋 TODO | P0 | GLD-03 | Output file/table produced |
+| CON-02 | Second channel | File extract or DB delivery from consumption YAML | 🔄 BUILT, NOT VALIDATED | P0 | GLD-03 | Metric views and materialized views per asset class (definitions/consumption/*.yml, consumption stage with 8 step files per object); composition and validation tested offline; creation on Databricks still to do |
 | CON-03 | Power BI (stretch) | Connection to SQL warehouse | 📋 TODO | P2 | CON-01 | Screenshot |
+| ORC-05 | Master runner notebook with parameters | Notebook/command that triggers the pipeline jobs in order with mode, stages, date and extra parameters, waits and reports | 🔄 BUILT, NOT VALIDATED | P0 | ORC-04 | edap_framework/master.py, deployment/notebooks/master_runner.py, docs/runbooks/master_runner.md; not yet run on Databricks |
 
 ---
 
@@ -268,10 +270,10 @@ _Scheduled, event-driven and streaming workflows._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| ORC-01 | Scheduled job | SQL incremental + FX daily | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | deployment/jobs.yml (generated): edap-routine-daily (Common landing/bronze/silver/gold, then each asset class bronze->silver->gold) + edap-adhoc; not deployed |
+| ORC-01 | Scheduled job | SQL incremental + FX daily | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | Restructured 2026-11-21: one job per pipeline with its stages as tasks (edap-common; edap-equities/-fixedincome/-fx/-commodities: bronze, silver, gold, consumption) and edap-master (Common first, then the four in parallel, parameters passed through); bundle validate OK; 103 unit tests; not yet deployed in this shape |
 | ORC-02 | File-arrival trigger | Position file arrival starts the pipeline | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-02 | deployment/jobs.yml (generated): edap-positions-on-file-arrival (file_arrival trigger -> landing -> each asset-class bronze + silver position); not deployed |
 | ORC-03 | Streaming job | Continuous event ingestion | 🔄 BUILT, NOT VALIDATED | P1 | BRZ-03 | deployment/jobs.yml (generated): edap-trade-events-drain (every 15 min -> landing -> bronze -> silver trade_event per asset class); not deployed |
-| ORC-04 | End-to-end workflow | Landing -> Gold with dependencies | 📋 TODO | P0 | GLD-02 | Successful full run |
+| ORC-04 | End-to-end workflow | Landing -> Gold with dependencies | 🔄 BUILT, NOT VALIDATED | P0 | GLD-02 | edap-master + the master_runner notebook (deployment/notebooks/master_runner.py, edap-master command): plan/trigger/wait/report, Common-first ordering and failure handling tested with a fake jobs API; full Databricks run still to do |
 
 ---
 

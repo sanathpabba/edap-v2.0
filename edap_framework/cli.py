@@ -15,7 +15,7 @@ from edap_framework.pipeline.common import PipelineHalt
 from edap_framework.pipeline.context import PipelineContext
 from edap_framework.pipeline.sequence import run_sequence
 
-LAYERS = ["landing", "bronze", "silver", "gold"]
+LAYERS = ["landing", "bronze", "silver", "gold", "consumption"]
 
 
 def parse_args(argv=None):
@@ -26,6 +26,7 @@ def parse_args(argv=None):
     ap.add_argument("--mode", default="Routine", choices=["Routine", "Adhoc"])
     ap.add_argument("--item", action="append", help="limit to these items (repeatable), e.g. file-loads/positions or trade")
     ap.add_argument("--steps", help="step range, e.g. 4-7 or 5")
+    ap.add_argument("--stages", default="", help="comma list of layers to run (jobs pass the selected stages); a task whose --layer is not in it does nothing")
     ap.add_argument("--dry-run", action="store_true", help="print the plan, run nothing (no Spark needed)")
     ap.add_argument("--run-id", default=None, help="Databricks job run id (jobs pass {{job.run_id}})")
     ap.add_argument("--scenario", default=None, help="label for the run log (d0/d1/d2)")
@@ -55,8 +56,17 @@ def pipelines_for(name, layer):
     return [a for a in chosen if layer in a.items]
 
 
+def stage_selected(layer, stages):
+    """Empty/None = every stage. Otherwise the layer must be in the comma list."""
+    chosen = [x.strip() for x in (stages or "").split(",") if x.strip()]
+    return not chosen or layer in chosen
+
+
 def main(argv=None):
     a = parse_args(argv)
+    if not stage_selected(a.layer, a.stages):
+        print("stage '%s' not selected (stages=%s): nothing to do" % (a.layer, a.stages))
+        return 0
     first, last = 1, 99
     if a.steps:
         first, _, last = a.steps.partition("-")

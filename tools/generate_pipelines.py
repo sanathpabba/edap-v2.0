@@ -65,6 +65,17 @@ LAYER_STEPS = {
         ("notify_and_audit_log", "Email the owner the failed sanity checks (if any); write the run-log entry", "", ""),
     ],
 }
+LAYER_STEPS["consumption"] = [
+    ("init_context", "Initialise the run: schemas, run id, clock", "", ""),
+    ("read_consumption_yaml", "Read the metric view / materialized view definition", "", ""),
+    ("check_upstream", "Check the Gold product it reads exists", "", ""),
+    ("compose_sql", "Compose CREATE ... WITH METRICS, or CREATE / REFRESH MATERIALIZED VIEW", "Materialized views are refreshed when they exist.",
+     "--extra rebuild=true recreates a materialized view (use after changing its SELECT)."),
+    ("create_or_refresh", "Run the statement (job compute or the configured SQL warehouse)", "", ""),
+    ("apply_documentation", "Apply purpose, grain, owner, refresh as tags (best effort)", "", ""),
+    ("verify_object", "Prove it works: a MEASURE() query or a row count", "", ""),
+    ("audit_log", "Write the run-log entry", "", ""),
+]
 MODES = ["Routine", "Adhoc"]
 README = """# Pipelines
 
@@ -75,7 +86,7 @@ README = """# Pipelines
 
 - **Asset classes:** Equities, FixedIncome, FX, Commodities, plus **Common** (landing for every source, instrument master, portfolios, accounts,
   counterparties, FX rates, the conformed FX dimension). Common runs first.
-- **Layers:** landing (Common only), bronze, silver, gold.
+- **Layers:** landing (Common only), bronze, silver, gold, consumption (asset classes only: metric views and materialized views over Gold).
 - **Routine** = the scheduled incremental run. **Adhoc** = on demand: initial load, backfill, replay, rebuild, what-if.
 - **Each numbered file calls one framework function** (`edap_framework/pipeline/<layer>_steps.py`); the order of the files is the pipeline.
   The runner executes each table's steps in order, table after table.
@@ -135,51 +146,84 @@ def _task(key, ac, layer, mode, deps, extra=()):
     return t
 
 
+STAGES = ["landing", "bronze", "silver", "gold", "consumption"]
+# job parameters shared by every pipeline job and the master job (the master_runner notebook passes the same names)
+JOB_PARAMS = [{"name": "mode", "default": "Routine"}, {"name": "stages", "default": ",".join(STAGES)}, {"name": "date", "default": ""},
+              {"name": "expect_file", "default": "true"}, {"name": "extra", "default": ""}]
+
+
+def job_key(ac):
+    return "edap_" + ac.folder.lower()
+
+
+def job_name(ac):
+    return "edap-" + ac.folder.lower()
+
+
+def _stage_task(ac, layer, previous):
+    """One stage of a pipeline job: edap-run for this asset class and layer. The job parameters choose mode and stages (a stage not in `stages` exits cleanly)."""
+    extra = "date={{job.parameters.date}} {{job.parameters.extra}}"
+    if layer == "landing":
+        extra = "expect_file={{job.parameters.expect_file}} " + extra            # expected-file halt (daily run); the master turns it off for Adhoc
+    t = {"task_key": "%s_%s" % (ac.folder.lower(), layer), "environment_key": "edap_env", "depends_on": [{"task_key": previous}] if previous else [],
+         "python_wheel_task": {"package_name": "edap_framework", "entry_point": "edap-run",
+                               "parameters": ["--asset-class", ac.folder, "--layer", layer, "--mode", "{{job.parameters.mode}}", "--stages", "{{job.parameters.stages}}",
+                                              "--run-id", "{{job.run_id}}", "--extra", extra]}}
+    if not previous:
+        del t["depends_on"]
+    return t
+
+
 def write_jobs(acs):
     import yaml
     # The wheel (tools/build_wheel.py, published to the UC volume by CI or tools/publish_wheel.sh) carries the code, definitions and pipelines.
     # Jobs install it from the volume path in the bundle variable wheel_path; environment version 4 (Python 3.12) is the one verified on serverless.
     env = [{"environment_key": "edap_env", "spec": {"environment_version": "4", "dependencies": ["${var.wheel_path}", "databricks-labs-dqx==0.17.2"]}}]
     ac_names = [a.folder for a in acs if a.prefix != "common"]
-    # job parameter `date` = the run date (empty = today). The positions file expected is the one for the previous business day of that date,
-    # and the FX pull uses that date: run the job with date=2026-11-17 to process the demo day D1 (expects positions_20261116.csv).
-    tasks = [_task("common_landing", "Common", "landing", "Routine", [], ["--extra", "expect_file=true date={{job.parameters.date}}"]), _task("common_bronze", "Common", "bronze", "Routine", ["common_landing"]),
-             _task("common_silver", "Common", "silver", "Routine", ["common_bronze"]), _task("common_gold", "Common", "gold", "Routine", ["common_silver"])]
-    for n in ac_names:
-        k = n.lower()
-        tasks += [_task(k + "_bronze", n, "bronze", "Routine", ["common_bronze"]),
-                  _task(k + "_silver", n, "silver", "Routine", [k + "_bronze", "common_silver"]),
-                  _task(k + "_gold", n, "gold", "Routine", [k + "_silver", "common_gold"])]
-    jobs = {
-        "edap_routine_daily": {"name": "edap-routine-daily", "schedule": {"quartz_cron_expression": "0 0 6 * * ?", "timezone_id": "UTC", "pause_status": "PAUSED"},
-                               "parameters": [{"name": "date", "default": ""}], "environments": env, "tasks": tasks},
-        "edap_positions_on_file_arrival": {
-            "name": "edap-positions-on-file-arrival", "environments": env,
-            "trigger": {"pause_status": "PAUSED", "file_arrival": {"url": "abfss://landing@edapdl.dfs.core.windows.net/positions/inbound/"}},
-            "tasks": [_task("landing_positions", "Common", "landing", "Routine", [], ["--item", "file-loads/positions"])]
-                     + [t for n in ac_names for t in (_task(n.lower() + "_bronze_positions", n, "bronze", "Routine", ["landing_positions"], ["--item", "file-loads/positions"]),
-                                                      _task(n.lower() + "_silver_position", n, "silver", "Routine", [n.lower() + "_bronze_positions"], ["--item", "position"]))]},
-        "edap_trade_events_drain": {
-            "name": "edap-trade-events-drain", "environments": env,
-            "schedule": {"quartz_cron_expression": "0 0/15 * * * ?", "timezone_id": "UTC", "pause_status": "PAUSED"},
-            "tasks": [_task("landing_events", "Common", "landing", "Routine", [], ["--item", "stream-loads/trade_events"])]
-                     + [t for n in ac_names for t in (_task(n.lower() + "_bronze_events", n, "bronze", "Routine", ["landing_events"], ["--item", "stream-loads/trade_events"]),
-                                                     _task(n.lower() + "_silver_event", n, "silver", "Routine", [n.lower() + "_bronze_events"], ["--item", "trade_event"]))]},
-        "edap_adhoc": {
-            "name": "edap-adhoc (initial load / backfill / replay / rebuild)", "environments": env,
-            "parameters": [{"name": "asset_class", "default": "Equities"}, {"name": "layer", "default": "bronze"}, {"name": "extra", "default": ""}],
-            "tasks": [{"task_key": "adhoc", "environment_key": "edap_env", "python_wheel_task": {
-                "package_name": "edap_framework", "entry_point": "edap-run",
-                "parameters": ["--asset-class", "{{job.parameters.asset_class}}", "--layer", "{{job.parameters.layer}}", "--mode", "Adhoc",
-                               "--run-id", "{{job.run_id}}", "--extra", "{{job.parameters.extra}}"]}}]},
-    }
+    jobs = {}
+    # one job per pipeline: its stages in order (Common: landing, bronze, silver, gold; asset classes: bronze, silver, gold, consumption)
+    for ac in sorted(acs, key=lambda a: (a.prefix != "common", a.folder)):
+        stage_tasks, prev = [], None
+        for layer in STAGES:
+            if layer in ac.items:
+                stage_tasks.append(_stage_task(ac, layer, prev))
+                prev = stage_tasks[-1]["task_key"]
+        jobs[job_key(ac)] = {"name": job_name(ac), "parameters": JOB_PARAMS, "environments": env, "tasks": stage_tasks}
+    # the master job: Common first, then every asset class in parallel; all parameters pass straight through to the pipeline jobs
+    passthrough = {p["name"]: "{{job.parameters.%s}}" % p["name"] for p in JOB_PARAMS}
+    master_tasks = [{"task_key": "common", "run_job_task": {"job_id": "${resources.jobs.edap_common.id}", "job_parameters": passthrough}}]
+    for ac in sorted((a for a in acs if a.prefix != "common"), key=lambda a: a.folder):
+        master_tasks.append({"task_key": ac.folder.lower(), "depends_on": [{"task_key": "common"}],
+                             "run_job_task": {"job_id": "${resources.jobs.%s.id}" % job_key(ac), "job_parameters": passthrough}})
+    jobs["edap_master"] = {"name": "edap-master", "schedule": {"quartz_cron_expression": "0 0 6 * * ?", "timezone_id": "UTC", "pause_status": "PAUSED"},
+                           "parameters": JOB_PARAMS, "tasks": master_tasks}
+    jobs["edap_positions_on_file_arrival"] = {
+        "name": "edap-positions-on-file-arrival", "environments": env,
+        "trigger": {"pause_status": "PAUSED", "file_arrival": {"url": "abfss://landing@edapdl.dfs.core.windows.net/positions/inbound/"}},
+        "tasks": [_task("landing_positions", "Common", "landing", "Routine", [], ["--item", "file-loads/positions"])]
+                 + [t for n in ac_names for t in (_task(n.lower() + "_bronze_positions", n, "bronze", "Routine", ["landing_positions"], ["--item", "file-loads/positions"]),
+                                                  _task(n.lower() + "_silver_position", n, "silver", "Routine", [n.lower() + "_bronze_positions"], ["--item", "position"]))]}
+    jobs["edap_trade_events_drain"] = {
+        "name": "edap-trade-events-drain", "environments": env,
+        "schedule": {"quartz_cron_expression": "0 0/15 * * * ?", "timezone_id": "UTC", "pause_status": "PAUSED"},
+        "tasks": [_task("landing_events", "Common", "landing", "Routine", [], ["--item", "stream-loads/trade_events"])]
+                 + [t for n in ac_names for t in (_task(n.lower() + "_bronze_events", n, "bronze", "Routine", ["landing_events"], ["--item", "stream-loads/trade_events"]),
+                                                  _task(n.lower() + "_silver_event", n, "silver", "Routine", [n.lower() + "_bronze_events"], ["--item", "trade_event"]))]}
+    jobs["edap_adhoc"] = {
+        "name": "edap-adhoc (one pipeline, one layer; initial load / backfill / replay / rebuild)", "environments": env,
+        "parameters": [{"name": "asset_class", "default": "Equities"}, {"name": "layer", "default": "bronze"}, {"name": "extra", "default": ""}],
+        "tasks": [{"task_key": "adhoc", "environment_key": "edap_env", "python_wheel_task": {
+            "package_name": "edap_framework", "entry_point": "edap-run",
+            "parameters": ["--asset-class", "{{job.parameters.asset_class}}", "--layer", "{{job.parameters.layer}}", "--mode", "Adhoc",
+                           "--run-id", "{{job.run_id}}", "--extra", "{{job.parameters.extra}}"]}}]}
     fail_to = config.load_yaml("definitions/governance/notifications.yml").get("job_failure_recipients") or []
     if fail_to:                                              # crash safety net on top of the custom owner notifier
         for j in jobs.values():
             j["email_notifications"] = {"on_failure": fail_to}
     head = ("# Databricks jobs generated by tools/generate_pipelines.py from the pipeline folders. NOT yet deployed or validated.\n"
             "# Tasks run the installed wheel: python_wheel_task -> console command edap-run (see docs/runbooks/build_and_deploy.md).\n"
-            "# Common runs first; each asset class then runs bronze -> silver -> gold. Re-generate instead of editing by hand.\n")
+            "# One job per pipeline (edap-common, edap-equities, ...) with its stages as tasks, and edap-master which runs Common first, then the asset classes in parallel.\n"
+            "# The master_runner notebook triggers these jobs with parameters (mode, stages, date, extra). Re-generate instead of editing by hand.\n")
     class NoAliasDumper(yaml.SafeDumper):                    # repeat shared blocks instead of writing &anchors/*aliases
         def ignore_aliases(self, data):
             return True

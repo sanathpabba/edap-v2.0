@@ -1,0 +1,22 @@
+# Consumption: MATERIALIZED VIEW with the daily trade summary per portfolio for one asset class (pre-computed for fast dashboards).
+version: 1
+layer: consumption
+kind: materialized_view
+target: {catalog: edap, schema: consumption, table: ${ac}_trade_daily_mv}
+source: edap.gold.${ac}_trade_analytics
+documentation:
+  business_purpose: "Daily trade summary per portfolio, side and status for ${asset_class}"
+  grain: one row per trade_date x portfolio x side x trade_status
+  owner: trading-data-owner
+  sensitivity: synthetic
+  refresh_pattern: refreshed by the consumption stage after Gold is built
+  intended_consumers: [Trading dashboards, Finance]
+materialized_view:
+  select: |
+    SELECT trade_date, portfolio_id, portfolio_name, business_unit, side, trade_status,
+           COUNT(*) AS trade_count,
+           SUM(gross_amount_usd) AS gross_notional_usd,
+           SUM(net_amount_usd) AS net_notional_usd,
+           SUM(commission_fees_usd) AS costs_usd
+    FROM edap.gold.${ac}_trade_analytics
+    GROUP BY trade_date, portfolio_id, portfolio_name, business_unit, side, trade_status

@@ -7,7 +7,7 @@
 
 - **Asset classes:** Equities, FixedIncome, FX, Commodities, plus **Common** (landing for every source, instrument master, portfolios, accounts,
   counterparties, FX rates, the conformed FX dimension). Common runs first.
-- **Layers:** landing (Common only), bronze, silver, gold.
+- **Layers:** landing (Common only), bronze, silver, gold, consumption (asset classes only: metric views and materialized views over Gold).
 - **Routine** = the scheduled incremental run. **Adhoc** = on demand: initial load, backfill, replay, rebuild, what-if.
 - **Each numbered file calls one framework function** (`edap_framework/pipeline/<layer>_steps.py`); the order of the files is the pipeline.
   The runner executes each table's steps in order, table after table.

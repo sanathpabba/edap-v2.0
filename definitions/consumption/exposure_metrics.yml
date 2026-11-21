@@ -1,0 +1,32 @@
+# Consumption: governed exposure metrics for one asset class, as a METRIC VIEW over the Gold position & exposure product.
+version: 1
+layer: consumption
+kind: metric_view
+target: {catalog: edap, schema: consumption, table: ${ac}_exposure_metrics}
+source: edap.gold.${ac}_position_exposure
+documentation:
+  business_purpose: "Position and exposure metrics for ${asset_class} in USD"
+  grain: query-time (any combination of the dimensions)
+  owner: portfolio-data-owner
+  sensitivity: synthetic
+  refresh_pattern: always current (reads the Gold product when queried)
+  intended_consumers: [Risk dashboard, Portfolio managers, Genie]
+metric_view:
+  comment: "Exposure metrics for ${asset_class} (USD at the position-date FX rate)"
+  dimensions:
+    - {name: Position Date, expr: position_date}
+    - {name: Portfolio, expr: portfolio_name}
+    - {name: Business Unit, expr: business_unit}
+    - {name: Region, expr: region}
+    - {name: Instrument, expr: instrument_name}
+    - {name: Asset Class, expr: asset_class}
+    - {name: Exposure Side, expr: exposure_side}
+    - {name: Currency, expr: currency}
+  measures:
+    - {name: Position Count, expr: "COUNT(1)"}
+    - {name: Market Value USD, expr: "SUM(market_value_usd)"}
+    - {name: Cost Basis USD, expr: "SUM(cost_basis_usd)"}
+    - {name: Unrealized PnL USD, expr: "SUM(market_value_usd) - SUM(cost_basis_usd)"}
+    - {name: Gross Exposure USD, expr: "SUM(ABS(market_value_usd))"}
+    - {name: Long Exposure USD, expr: "SUM(market_value_usd) FILTER (WHERE exposure_side = 'LONG')"}
+    - {name: Short Exposure USD, expr: "SUM(market_value_usd) FILTER (WHERE exposure_side = 'SHORT')"}

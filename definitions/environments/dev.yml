@@ -18,3 +18,5 @@ secrets:
     smtp_password: smtp-password
 eventhub_namespace: edap-eventhubs-645ca5
 schemas: {bronze: bronze, metadata: metadata, audit: audit}
+consumption:
+  sql_warehouse_id: ""               # empty = run the statements on the job's own serverless compute; set a (serverless) SQL warehouse id if metric/materialized views need one

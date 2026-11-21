@@ -1,0 +1,23 @@
+# Consumption: MATERIALIZED VIEW with daily exposure per portfolio and asset class (pre-computed for fast dashboards).
+version: 1
+layer: consumption
+kind: materialized_view
+target: {catalog: edap, schema: consumption, table: ${ac}_portfolio_exposure_mv}
+source: edap.gold.${ac}_position_exposure
+documentation:
+  business_purpose: "Daily USD exposure per portfolio for ${asset_class}"
+  grain: one row per position_date x portfolio x asset_class
+  owner: portfolio-data-owner
+  sensitivity: synthetic
+  refresh_pattern: refreshed by the consumption stage after Gold is built
+  intended_consumers: [Risk dashboard, Portfolio managers]
+materialized_view:
+  select: |
+    SELECT position_date, portfolio_id, portfolio_name, asset_class,
+           COUNT(*) AS position_count,
+           SUM(market_value_usd) AS market_value_usd,
+           SUM(cost_basis_usd) AS cost_basis_usd,
+           SUM(CASE WHEN exposure_side = 'LONG' THEN market_value_usd ELSE 0 END) AS long_exposure_usd,
+           SUM(CASE WHEN exposure_side = 'SHORT' THEN market_value_usd ELSE 0 END) AS short_exposure_usd
+    FROM edap.gold.${ac}_position_exposure
+    GROUP BY position_date, portfolio_id, portfolio_name, asset_class

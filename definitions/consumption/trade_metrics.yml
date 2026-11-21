@@ -1,0 +1,37 @@
+# Consumption: governed trade metrics for one asset class, as a Unity Catalog METRIC VIEW over the Gold trade analytics product.
+# Measures are defined once here and re-aggregate correctly for any combination of dimensions (dashboards, Genie, SQL: MEASURE(`Trade Count`)).
+version: 1
+layer: consumption
+kind: metric_view
+target: {catalog: edap, schema: consumption, table: ${ac}_trade_metrics}
+source: edap.gold.${ac}_trade_analytics
+documentation:
+  business_purpose: "Trade volume, notional, cost and failure metrics for ${asset_class}"
+  grain: query-time (any combination of the dimensions)
+  owner: trading-data-owner
+  sensitivity: synthetic
+  refresh_pattern: always current (reads the Gold product when queried)
+  intended_consumers: [Trading dashboards, Genie, Finance]
+metric_view:
+  comment: "Trade metrics for ${asset_class} (USD at the trade-date FX rate)"
+  dimensions:
+    - {name: Trade Date, expr: trade_date}
+    - {name: Trade Month, expr: "DATE_TRUNC('MONTH', trade_date)"}
+    - {name: Side, expr: side}
+    - {name: Trade Status, expr: trade_status}
+    - {name: Instrument, expr: instrument_name}
+    - {name: Portfolio, expr: portfolio_name}
+    - {name: Business Unit, expr: business_unit}
+    - {name: Counterparty, expr: counterparty_name}
+    - {name: Credit Rating, expr: credit_rating}
+    - {name: Strategy, expr: strategy}
+  measures:
+    - {name: Trade Count, expr: "COUNT(1)"}
+    - {name: Gross Notional USD, expr: "SUM(gross_amount_usd)"}
+    - {name: Net Notional USD, expr: "SUM(net_amount_usd)"}
+    - {name: Costs USD, expr: "SUM(commission_fees_usd)"}
+    - {name: Cost Rate Bps, expr: "MEASURE(`Costs USD`) / MEASURE(`Gross Notional USD`) * 10000"}
+    - {name: Failed Trades, expr: "COUNT(1) FILTER (WHERE is_failed)"}
+    - {name: Failure Rate, expr: "MEASURE(`Failed Trades`) / MEASURE(`Trade Count`)"}
+    - {name: Cancelled Trades, expr: "COUNT(1) FILTER (WHERE is_cancelled)"}
+    - {name: Average Days To Settle, expr: "AVG(days_to_settle)"}

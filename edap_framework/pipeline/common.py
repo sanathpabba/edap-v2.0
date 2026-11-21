@@ -5,7 +5,7 @@ import functools
 from edap_framework.core import audit, config
 from edap_framework.notify import notifier
 
-LAYER_SCHEMAS = {"landing": [], "bronze": ["bronze"], "silver": ["silver", "reference"], "gold": ["gold"]}
+LAYER_SCHEMAS = {"landing": [], "bronze": ["bronze"], "silver": ["silver", "reference"], "gold": ["gold"], "consumption": ["consumption"]}
 BASE_SCHEMAS = ["audit", "metadata", "quarantine", "monitoring"]
 
 

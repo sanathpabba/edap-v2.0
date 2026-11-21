@@ -9,3 +9,4 @@ items:                           # what each layer processes, in order
   bronze: [sql-loads/trades, file-loads/positions, stream-loads/trade_events]
   silver: [instrument, trade, position, trade_event]
   gold: [trade_analytics, position_exposure, pnl_finance, regulatory_reporting]
+  consumption: [trade_metrics, exposure_metrics, trade_daily_mv, portfolio_exposure_mv]
