@@ -321,7 +321,7 @@ _Bundles and CI._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| DEP-01 | Declarative Automation Bundle | Jobs/pipelines/dashboards as code | 🔄 BUILT, NOT VALIDATED | P1 | ORC-04 | databricks.yml (wheel artifact, credential-safe sync excludes) + generated deployment/jobs.yml (python_wheel_task); jobs parse as valid edap-run commands (unit test); bundle validate/deploy on v2-0 still to do |
+| DEP-01 | Declarative Automation Bundle | Jobs/pipelines/dashboards as code | 🔄 BUILT, NOT VALIDATED | P1 | ORC-04 | Deployed 2026-11-21 via GitHub Actions as service principal edap-ci: 4 jobs created in dev on v2-0 (paused), wheel dependency resolved. Now wheel-only: databricks.yml uses variable wheel_path (UC volume), syncs only deployment/, jobs on environment version 4; bundle validate OK; re-deploy of the new shape not yet run |
 | DEP-02 | Environment configs | dev/test/prod overlays | 📋 TODO | P2 | DEP-01 | Overlay switch |
 | DEP-03 | CI | Lint + tests on push | 🔄 BUILT, NOT VALIDATED | P2 | FND-09 | .github/workflows/ci.yml (validate, generated-files check, tests, wheel build + clean-venv smoke test, Python 3.9 and 3.11) and release.yml (tag release, manual deploy); YAML valid; not yet run on GitHub |
 | DEP-04 | Build, publish and install pipeline for the wheel | Versioned wheel build with content verification, publish to a UC volume, install on clusters/serverless/notebooks, release by tag | 🔄 BUILT, NOT VALIDATED | P1 | FWK-06 | tools/build_wheel.py, publish_wheel.sh, install_on_cluster.sh, Makefile, docs/runbooks/build_and_deploy.md; build verified locally; publish/install on Databricks not yet run |

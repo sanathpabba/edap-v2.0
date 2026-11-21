@@ -137,8 +137,9 @@ def _task(key, ac, layer, mode, deps, extra=()):
 
 def write_jobs(acs):
     import yaml
-    # the wheel (built by `artifacts` in databricks.yml, see tools/build_wheel.py) carries the code, definitions and pipelines; DQX is its extra
-    env = [{"environment_key": "edap_env", "spec": {"environment_version": "2", "dependencies": ["../dist/*.whl", "databricks-labs-dqx==0.17.2"]}}]
+    # The wheel (tools/build_wheel.py, published to the UC volume by CI or tools/publish_wheel.sh) carries the code, definitions and pipelines.
+    # Jobs install it from the volume path in the bundle variable wheel_path; environment version 4 (Python 3.12) is the one verified on serverless.
+    env = [{"environment_key": "edap_env", "spec": {"environment_version": "4", "dependencies": ["${var.wheel_path}", "databricks-labs-dqx==0.17.2"]}}]
     ac_names = [a.folder for a in acs if a.prefix != "common"]
     tasks = [_task("common_landing", "Common", "landing", "Routine", [], ["--extra", "expect_file=true"]), _task("common_bronze", "Common", "bronze", "Routine", ["common_landing"]),
              _task("common_silver", "Common", "silver", "Routine", ["common_bronze"]), _task("common_gold", "Common", "gold", "Routine", ["common_silver"])]

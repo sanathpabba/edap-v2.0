@@ -31,8 +31,9 @@ def test_project_root_prefers_env_then_repo(monkeypatch):
 def test_every_job_task_runs_the_wheel_and_is_a_valid_edap_run_command():
     placeholders = {"{{job.run_id}}": "123", "{{job.parameters.asset_class}}": "Equities", "{{job.parameters.layer}}": "bronze", "{{job.parameters.extra}}": "date=2026-11-18"}
     for name, job in _jobs().items():
-        deps = job["environments"][0]["spec"]["dependencies"]
-        assert "../dist/*.whl" in deps and any(d.startswith("databricks-labs-dqx") for d in deps), name
+        spec = job["environments"][0]["spec"]
+        assert spec["environment_version"] == "4", name                          # the version verified on serverless
+        assert "${var.wheel_path}" in spec["dependencies"] and any(d.startswith("databricks-labs-dqx") for d in spec["dependencies"]), name
         for t in job["tasks"]:
             w = t["python_wheel_task"]
             assert w["package_name"] == "edap_framework" and w["entry_point"] == "edap-run" and t["environment_key"] == "edap_env"
@@ -50,11 +51,12 @@ def test_task_dependencies_refer_to_tasks_in_the_same_job():
             assert {d["task_key"] for d in t.get("depends_on", [])} <= keys, (name, t["task_key"])
 
 
-def test_bundle_builds_the_wheel_and_never_syncs_credentials():
+def test_bundle_uses_the_published_wheel_and_syncs_almost_nothing():
     b = yaml.safe_load(open(os.path.join(ROOT, "databricks.yml")))
-    assert b["artifacts"]["edap_framework"]["type"] == "whl" and "tools/build_wheel.py" in b["artifacts"]["edap_framework"]["build"]
-    for must in (".databrickscfg*", "chat.json", "config/*.env", ".venv/**"):
-        assert must in b["sync"]["exclude"]
+    default = b["variables"]["wheel_path"]["default"]
+    assert default.startswith("/Volumes/edap/metadata/artifacts/edap_framework-") and default.endswith("-py3-none-any.whl")
+    assert "artifacts" not in b                                                    # the wheel is built and published by CI, not by the bundle
+    assert b["sync"]["paths"] == ["deployment"]                                    # the wheel carries code, definitions and pipelines
 
 
 def test_ci_and_release_workflows_are_valid_yaml_with_expected_steps():
@@ -62,5 +64,10 @@ def test_ci_and_release_workflows_are_valid_yaml_with_expected_steps():
     for needle in ("validate_definitions.py", "pytest", "build_wheel.py", "edap-validate", "upload-artifact"):
         assert needle in ci
     rel = yaml.safe_load(open(os.path.join(ROOT, ".github", "workflows", "release.yml")))
-    assert "deploy" in rel["jobs"] and rel["jobs"]["deploy"]["environment"].startswith("databricks-")
-    assert "DATABRICKS_CLIENT_SECRET" in rel["jobs"]["deploy"]["env"]
+    pub = rel["jobs"]["publish"]
+    assert pub["environment"].startswith("databricks-") and "DATABRICKS_CLIENT_SECRET" in pub["env"]
+    text = open(os.path.join(ROOT, ".github", "workflows", "release.yml")).read()
+    assert "databricks fs cp" in text and "/Volumes/edap/metadata/artifacts" in text and "download-artifact" in text
+    triggers = rel.get("on") or rel.get(True)                                      # YAML 1.1 reads the key `on` as the boolean True
+    assert triggers["workflow_dispatch"]["inputs"]["deploy_jobs"]["default"] is False      # deploying the jobs is opt-in
+    assert "bundle deploy" in text and "deploy_jobs == 'true'" in text

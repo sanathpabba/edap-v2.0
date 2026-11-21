@@ -1,5 +1,7 @@
 # Release: tag vX.Y.Z -> build the wheel and attach it to a GitHub release.
-# Deploy: run manually (workflow_dispatch) to deploy the bundle to Databricks (needs the secrets below, protected by an environment approval).
+# Publish: run manually (workflow_dispatch, deploy_target = dev) to upload the wheel to the Unity Catalog volume. That is all a notebook or job needs:
+#   %pip install /Volumes/edap/metadata/artifacts/<wheel>
+# Optional: tick deploy_jobs to also deploy the Databricks jobs (bundle). Needs the secrets below, protected by an environment approval.
 name: release
 
 on:
@@ -8,16 +10,21 @@ on:
   workflow_dispatch:
     inputs:
       deploy_target:
-        description: "Bundle target to deploy (dev | test | prod), empty = build only"
+        description: "Publish the wheel to this target (dev | test | prod); empty = build only"
         required: false
         default: ""
+      deploy_jobs:
+        description: "Also deploy the jobs bundle (default: wheel only)"
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: write
 
 jobs:
   build:
-    runs-on: ubuntu-24.04      # pinned: ubuntu-latest moved to 26.04, which has no Python 3.9 build
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -51,24 +58,37 @@ jobs:
         with:
           files: dist/*.whl
 
-  deploy:
+  publish:
     needs: build
     if: ${{ github.event.inputs.deploy_target != '' }}
-    runs-on: ubuntu-24.04      # pinned: ubuntu-latest moved to 26.04, which has no Python 3.9 build
+    runs-on: ubuntu-24.04
     environment: databricks-${{ github.event.inputs.deploy_target }}     # configure required reviewers on this environment
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}                      # secrets live in GitHub, never in the repository
       DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}            # OAuth machine-to-machine service principal
       DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
       TARGET: ${{ github.event.inputs.deploy_target }}
+      DEPLOY_JOBS: ${{ github.event.inputs.deploy_jobs }}
+      VOLUME: /Volumes/edap/metadata/artifacts
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/download-artifact@v4                                 # the wheel built by the build job: no rebuild, no repo sync
         with:
-          python-version: "3.11"
-      - run: pip install -r requirements-ci.txt
+          name: edap-framework-wheel
+          path: dist
       - uses: databricks/setup-cli@main                                    # pin to a released version once chosen
-      - name: Validate and deploy the bundle (builds and uploads the wheel through `artifacts`)
+
+      - name: Upload the wheel to the Unity Catalog volume
         run: |
-          databricks bundle validate -t "$TARGET"
-          databricks bundle deploy -t "$TARGET"
+          WHEEL=$(ls dist/edap_framework-*.whl)
+          NAME=$(basename "$WHEEL")
+          databricks fs cp "$WHEEL" "dbfs:$VOLUME/$NAME" --overwrite
+          echo "WHEEL_PATH=$VOLUME/$NAME" >> "$GITHUB_ENV"
+          echo "Published wheel: \`$VOLUME/$NAME\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "Install in a notebook: \`%pip install $VOLUME/$NAME\`" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Deploy the jobs (only when deploy_jobs is ticked)
+        if: ${{ github.event.inputs.deploy_jobs == 'true' }}
+        run: |
+          databricks bundle validate -t "$TARGET" --var "wheel_path=$WHEEL_PATH"
+          databricks bundle deploy -t "$TARGET" --var "wheel_path=$WHEEL_PATH"

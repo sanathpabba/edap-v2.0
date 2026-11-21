@@ -35,7 +35,7 @@ make publish                                               # builds, then upload
 ## 3. Install, by compute type
 | Where | How |
 |---|---|
-| **Serverless jobs** (the generated jobs) | automatic: `databricks bundle deploy` builds the wheel (`artifacts` in `databricks.yml`) and the job environment installs `../dist/*.whl` plus `databricks-labs-dqx==0.17.2`; tasks are `python_wheel_task` -> `edap-run` |
+| **Serverless jobs** (the generated jobs) | the job environment installs the published wheel from the volume (bundle variable `wheel_path`) plus `databricks-labs-dqx==0.17.2` (environment version 4); tasks are `python_wheel_task` -> `edap-run` |
 | **Notebook** (serverless or classic) | `%pip install /Volumes/edap/metadata/artifacts/<wheel>.whl[dq]` then `dbutils.library.restartPython()` |
 | **Classic / all-purpose cluster** | `make install-cluster CLUSTER=<cluster-id> WHEEL=/Volumes/edap/metadata/artifacts/<wheel>.whl` (cluster library; add `--uninstall-old` and restart when replacing a wheel of the same version) |
 
@@ -49,16 +49,21 @@ import edap_framework; print(edap_framework.__version__)
 - **ci.yml** (every push to `main` and every pull request; Python 3.9 and 3.11): validate definitions -> check the generated `pipelines/` and `deployment/jobs.yml` are up to date
   -> unit tests -> build the wheel -> install it in a clean virtualenv and run `edap-validate` and an `edap-run --dry-run` from outside the repository -> upload the wheel as an artifact.
 - **release.yml**: push a tag `vX.Y.Z` (must equal `edap_framework.__version__`) -> tests -> wheel attached to a GitHub release.
-  Run it manually (`workflow_dispatch`, `deploy_target` = dev/test/prod) to also `databricks bundle validate` and `deploy` that target.
+  Run it manually (`workflow_dispatch`, `deploy_target` = dev) to **publish the wheel**: the `publish` job downloads the wheel the build job made and uploads it to `/Volumes/edap/metadata/artifacts/` (seconds, nothing else is synced).
+  Tick `deploy_jobs` to also deploy the Databricks jobs (`bundle deploy --var wheel_path=<that wheel>`); it is off by default because the wheel alone is all a notebook needs.
   Deploy needs GitHub secrets `DATABRICKS_HOST`, `DATABRICKS_CLIENT_ID`, `DATABRICKS_CLIENT_SECRET` (an OAuth service principal) and a GitHub environment named `databricks-<target>`
   with required reviewers. No credentials are ever stored in the repository, and `databricks.yml` excludes `.databrickscfg*`, `chat.json`, `config/*.env` from syncing.
 
 ## 5. Release steps
 1. Change `__version__` in `edap_framework/__init__.py`, commit, push (CI must be green).
 2. `git tag v0.2.0 && git push origin v0.2.0` -> release workflow builds and attaches the wheel.
-3. Deploy: run the release workflow manually for the target, or locally `databricks bundle deploy -t dev --profile v2`.
+3. Publish: run the release workflow manually with `deploy_target = dev` (wheel to the volume), or locally `make publish`. Jobs, only if wanted: tick `deploy_jobs`, or locally `databricks bundle deploy -t dev --profile v2 --var wheel_path=/Volumes/edap/metadata/artifacts/<wheel>`.
+
+## Verified so far
+- 2026-11-21: the wheel was installed on serverless from a workspace file and from the volume (`%pip install`), and the CI deploy built the wheel and created the four jobs in dev as the `edap-ci` service principal.
+- That first deploy synced 1,384 repo files and took ~2 minutes, which the wheel makes unnecessary: the workflow now only uploads the wheel and the bundle syncs just `deployment/`.
 
 ## Not yet verified
 Built and installed in a clean virtualenv (outside the repository, no Spark) with `edap-validate` and `edap-run --dry-run` passing; 75 offline tests including that build.
-Not yet done: GitHub Actions run, upload to the UC volume, cluster/serverless installation, `bundle validate/deploy` on the v2-0 workspace, running a pipeline on Databricks.
+Not yet done: running the new wheel-only publish on GitHub, running a pipeline on Databricks.
 Python 3.11 (serverless environment 2) is covered by the CI matrix, not run locally.
