@@ -9,6 +9,9 @@ resources:
         quartz_cron_expression: 0 0 6 * * ?
         timezone_id: UTC
         pause_status: PAUSED
+      parameters:
+      - name: date
+        default: ''
       environments:
       - environment_key: edap_env
         spec:
@@ -32,7 +35,7 @@ resources:
           - --run-id
           - '{{job.run_id}}'
           - --extra
-          - expect_file=true
+          - expect_file=true date={{job.parameters.date}}
       - task_key: common_bronze
         environment_key: edap_env
         depends_on:

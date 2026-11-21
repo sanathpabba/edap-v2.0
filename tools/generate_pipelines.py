@@ -141,7 +141,9 @@ def write_jobs(acs):
     # Jobs install it from the volume path in the bundle variable wheel_path; environment version 4 (Python 3.12) is the one verified on serverless.
     env = [{"environment_key": "edap_env", "spec": {"environment_version": "4", "dependencies": ["${var.wheel_path}", "databricks-labs-dqx==0.17.2"]}}]
     ac_names = [a.folder for a in acs if a.prefix != "common"]
-    tasks = [_task("common_landing", "Common", "landing", "Routine", [], ["--extra", "expect_file=true"]), _task("common_bronze", "Common", "bronze", "Routine", ["common_landing"]),
+    # job parameter `date` = the run date (empty = today). The positions file expected is the one for the previous business day of that date,
+    # and the FX pull uses that date: run the job with date=2026-11-17 to process the demo day D1 (expects positions_20261116.csv).
+    tasks = [_task("common_landing", "Common", "landing", "Routine", [], ["--extra", "expect_file=true date={{job.parameters.date}}"]), _task("common_bronze", "Common", "bronze", "Routine", ["common_landing"]),
              _task("common_silver", "Common", "silver", "Routine", ["common_bronze"]), _task("common_gold", "Common", "gold", "Routine", ["common_silver"])]
     for n in ac_names:
         k = n.lower()
@@ -150,7 +152,7 @@ def write_jobs(acs):
                   _task(k + "_gold", n, "gold", "Routine", [k + "_silver", "common_gold"])]
     jobs = {
         "edap_routine_daily": {"name": "edap-routine-daily", "schedule": {"quartz_cron_expression": "0 0 6 * * ?", "timezone_id": "UTC", "pause_status": "PAUSED"},
-                               "environments": env, "tasks": tasks},
+                               "parameters": [{"name": "date", "default": ""}], "environments": env, "tasks": tasks},
         "edap_positions_on_file_arrival": {
             "name": "edap-positions-on-file-arrival", "environments": env,
             "trigger": {"pause_status": "PAUSED", "file_arrival": {"url": "abfss://landing@edapdl.dfs.core.windows.net/positions/inbound/"}},

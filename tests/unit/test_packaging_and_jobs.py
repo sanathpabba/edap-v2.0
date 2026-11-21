@@ -29,7 +29,7 @@ def test_project_root_prefers_env_then_repo(monkeypatch):
 
 
 def test_every_job_task_runs_the_wheel_and_is_a_valid_edap_run_command():
-    placeholders = {"{{job.run_id}}": "123", "{{job.parameters.asset_class}}": "Equities", "{{job.parameters.layer}}": "bronze", "{{job.parameters.extra}}": "date=2026-11-18"}
+    placeholders = {"{{job.run_id}}": "123", "{{job.parameters.asset_class}}": "Equities", "{{job.parameters.layer}}": "bronze", "{{job.parameters.extra}}": "date=2026-11-18", "{{job.parameters.date}}": "2026-11-17"}
     for name, job in _jobs().items():
         spec = job["environments"][0]["spec"]
         assert spec["environment_version"] == "4", name                          # the version verified on serverless
@@ -37,7 +37,11 @@ def test_every_job_task_runs_the_wheel_and_is_a_valid_edap_run_command():
         for t in job["tasks"]:
             w = t["python_wheel_task"]
             assert w["package_name"] == "edap_framework" and w["entry_point"] == "edap-run" and t["environment_key"] == "edap_env"
-            args = parse_args([placeholders.get(p, p) for p in w["parameters"]])
+            def fill(p):
+                for k, v in placeholders.items():
+                    p = p.replace(k, v)
+                return p
+            args = parse_args([fill(p) for p in w["parameters"]])
             targets = pipelines_for(args.asset_class, args.layer)
             assert targets, (name, t["task_key"])                              # asset class and layer exist
             for item in args.item or []:                                        # --item must name a real table of that pipeline
@@ -71,3 +75,15 @@ def test_ci_and_release_workflows_are_valid_yaml_with_expected_steps():
     triggers = rel.get("on") or rel.get(True)                                      # YAML 1.1 reads the key `on` as the boolean True
     assert triggers["workflow_dispatch"]["inputs"]["deploy_jobs"]["default"] is False      # deploying the jobs is opt-in
     assert "bundle deploy" in text and "deploy_jobs == 'true'" in text
+
+
+def test_routine_job_has_a_date_parameter_that_reaches_the_landing_task():
+    job = _jobs()["edap_routine_daily"]
+    assert {"name": "date", "default": ""} in job["parameters"]
+    landing = next(t for t in job["tasks"] if t["task_key"] == "common_landing")["python_wheel_task"]["parameters"]
+    assert "expect_file=true date={{job.parameters.date}}" in landing
+    from edap_framework.cli import build_params, parse_args as pa
+    p = build_params(pa(["--asset-class", "Common", "--layer", "landing", "--extra", "expect_file=true date="]))        # empty date = today
+    assert p["expect_file"] == "true" and p["date"] == ""
+    p2 = build_params(pa(["--asset-class", "Common", "--layer", "landing", "--extra", "expect_file=true date=2026-11-17"]))
+    assert p2["date"] == "2026-11-17"
