@@ -1,4 +1,4 @@
-"""Common / gold / fx_rate_daily / Adhoc - step 08: Run DQX expectations (flag mode).
+"""Common / gold / fx_rate_daily / Adhoc - step 08: Run DQX sanity checks (flag mode).
 """
 from edap_framework.pipeline import gold_steps as steps
 

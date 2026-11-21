@@ -1,4 +1,4 @@
-"""Common / bronze / api_fx_rates / Adhoc - step 08: Write the Bronze Delta table.
+"""Common / bronze / api_fx_rates / Adhoc - step 08: Write the Bronze Delta table and apply Unity Catalog comment and tags.
 
 Adhoc mode: Delete the replayed landing batches, then append: no duplicates.
 """

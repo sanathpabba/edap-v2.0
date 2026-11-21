@@ -10,6 +10,7 @@ cd source_generators
 ./run.sh demo.py d2        # incremental 2 (the position file is BAD)
 ./run.sh demo.py fix-d2    # corrected position file (after the bad file was quarantined)
 ./run.sh demo.py stale-fx  # weekend FX pull => stale-data case
+./run.sh demo.py wrong-file # position file with a wrong header => whole file rejected, pipeline halts, owner emailed
 ./run.sh demo.py status    # what exists now
 ./run.sh demo.py verify d2 # SQL checks + file checks + cross-source/Event Hubs read-back
 ./run.sh demo.py reset --yes   # DESTRUCTIVE: clears landing files, recreates the Event Hubs hub. Then run d0.
@@ -38,7 +39,7 @@ Cross-source verification after the rebuild: 8/8 (`docs/dissertation_evidence/cr
 
 ## Where things land
 - SQL: `edap-source-db` (`source.*`, `reference.*`); `source.load_log` records each scenario's watermark.
-- Files: ADLS `landing/positions/inbound/`, `landing/fx_rates/inbound/` (processed/archive/quarantine folders exist for the pipeline to use).
+- Files: left in the simulated source system storage (container `sourcedrop`, folder `positions/`); the Common/landing `file_positions` pipeline checks and copies them to ADLS `landing/positions/inbound/`. FX: `landing/fx_rates/inbound/`, `landing/fx_rates/inbound/` (processed/archive/quarantine folders exist for the pipeline to use).
 - Events: Event Hubs `trade-events` (4 partitions, keyed by trade_id), send-only and listen-only policies in Key Vault.
 - Evidence: `docs/dissertation_evidence/` (validation reports) and `docs/dissertation_evidence/source_manifests/` (counts per run).
 

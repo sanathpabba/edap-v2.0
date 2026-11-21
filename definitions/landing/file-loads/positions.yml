@@ -1,10 +1,15 @@
-# Landing spec: daily position extract. The source system drops CSV files into landing/positions/inbound;
-# the landing step only registers arrival (no content change). Run by pipelines/Common/landing (step files 01-08), item <this file>.
+# Landing spec: daily position extract. The source system drops CSV files in its own storage (source_drop); the landing pipeline checks each file as a whole
+# (received? readable? right header? not empty?), copies good files unchanged into landing/positions/inbound and registers them.
+# Whole-file failures HALT the pipeline and email the owner. Run by pipelines/Common/landing/file_positions (step files 01-09).
 version: 1
 layer: landing
 source_system: PORTFOLIO_SYS_FILES
 source_definition: definitions/sources/positions_file.yml
 table: positions
+source_drop:                           # where the source system leaves its files
+  container: sourcedrop
+  path: positions
+  after_copy: leave                    # leave | move_to_processed (never delete the source system's file)
 arrival:
   container: landing
   inbound_path: positions/inbound
@@ -17,6 +22,14 @@ arrival:
 registry:
   table: edap.audit.file_arrivals      # file name, size, business date, version, arrived_ts, status
   duplicate_file_rule: skip_if_same_name_and_size
+file_checks:                           # a failure of any of these = the WHOLE FILE is wrong -> file rejected to quarantine, pipeline halts
+  header: [position_id, position_date, portfolio_ref, instrument_code, position_qty, avg_cost, market_value, ccy, source_system]
+  min_data_rows: 1
+  readable: true
+  expected_file:                       # 'file not received' check, applied when the run asks for it (--extra expect_file=true)
+    pattern: "positions_{date}.csv"
+    business_date: previous_business_day
+notify: {owner: portfolio-data-owner}
 corrected_resend: replaces_quarantined_file_with_same_business_date
 audit:
   run_log: edap.audit.ingestion_runs

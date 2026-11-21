@@ -1,4 +1,4 @@
-"""Common / landing / stream_trade_events / Routine - step 04: Read from the source system.
+"""Common / landing / stream_trade_events / Routine - step 04: Read from the source system (file list from the source drop for files).
 """
 from edap_framework.pipeline import landing_steps as steps
 

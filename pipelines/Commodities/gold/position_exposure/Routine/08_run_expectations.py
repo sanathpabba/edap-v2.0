@@ -1,4 +1,4 @@
-"""Commodities / gold / position_exposure / Routine - step 08: Run DQX expectations (flag mode).
+"""Commodities / gold / position_exposure / Routine - step 08: Run DQX sanity checks (flag mode).
 """
 from edap_framework.pipeline import gold_steps as steps
 

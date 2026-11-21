@@ -45,12 +45,17 @@ def apply_documentation(ctx):
 
 
 def run_expectations(ctx):
-    """08 - DQX expectations on the product (flag mode: results recorded, rows kept)."""
+    """08 - DQX sanity checks on the product (flag mode: results recorded, rows kept)."""
     st = ctx.st
     st["dq"] = builder.run_expectations(ctx.spark, st["product"], ctx.env, ctx.batch_id, ctx.variables)
 
 
-def audit_log(ctx):
-    """09 - run log entry."""
-    st = ctx.st
-    common.log_run(ctx, "SUCCESS", st["count"], "-> %s; dq %s" % (st["fq"], st["dq"]))
+def notify_and_audit_log(ctx):
+    """09 - if sanity checks failed, email the owner the list of failed checks (Gold never halts: it is already built); write the run log."""
+    st, dq = ctx.st, ctx.st["dq"]
+    if dq and (dq.get("failed_rows") or dq.get("warned")):
+        common.send_notification(ctx, "GOLD_SANITY", "WARN", "Sanity checks failed on %s" % st["fq"],
+                                 ["%d of %d rows failed expectations; the product was still built" % (dq.get("failed_rows", 0), dq["total"])],
+                                 dq.get("rules"), dq.get("samples"), {"rows": dq["total"], "rows failing": dq.get("failed_rows", 0)},
+                                 ["Rule results: SELECT * FROM %s.monitoring.dq_results WHERE table_name = '%s' ORDER BY checked_ts DESC" % (ctx.env["catalog"], st["fq"])])
+    common.log_run(ctx, "SUCCESS", st["count"], "-> %s; dq %s" % (st["fq"], {k: dq[k] for k in ("total", "failed_rows", "warned")} if dq else None))

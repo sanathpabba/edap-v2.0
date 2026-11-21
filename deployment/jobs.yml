@@ -30,6 +30,8 @@ resources:
           - Routine
           - --run-id
           - '{{job.run_id}}'
+          - --extra
+          - expect_file=true
       - task_key: common_bronze
         environment_key: edap_env
         depends_on:

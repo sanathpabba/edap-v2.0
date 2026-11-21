@@ -1,0 +1,27 @@
+# Custom notifier configuration. Emails go to the OWNER of the table/entity/product (owner tag in each spec).
+# Nothing is sent until SMTP is configured; every notification is recorded in edap.monitoring.notifications either way.
+channels:
+  email:
+    enabled: true
+    smtp: {host_secret: smtp_host, user_secret: smtp_user, password_secret: smtp_password, port: 587, starttls: true}
+    from_address: ""                   # e.g. edap-alerts@yourdomain.com ; empty = record only, do not send
+    subject_prefix: "[EDAP]"
+defaults:
+  gate:
+    max_error_rate: 0.5                # share of rows failing error-level rules at which the WHOLE batch/file counts as wrong -> halt
+    notify_on: [halt, warn]            # halt = pipeline stopped ; warn = some rows quarantined, pipeline continued ; pass = all clean
+  max_sample_rows: 5                   # failing rows shown in the email
+  notify_adhoc: false                  # Adhoc runs are quiet unless --extra notify=true
+fallback_recipients: []                # used when an owner has no email (e.g. the data quality lead)
+job_failure_recipients: []             # added to the Databricks jobs as on_failure emails (crash safety net)
+owners:                                # owner tag -> contact. Fill in the email addresses.
+  trading-data-owner: {email: ""}
+  portfolio-data-owner: {email: ""}
+  market-data-owner: {email: ""}
+  risk-data-owner: {email: ""}
+  finance-data-owner: {email: ""}
+  reference-data-owner: {email: ""}
+  data-architecture: {email: ""}
+  data-product-owners: {email: ""}
+  data-quality-lead: {email: ""}
+  platform-engineering: {email: ""}

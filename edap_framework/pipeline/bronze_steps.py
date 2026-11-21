@@ -4,6 +4,7 @@ from edap_framework.core import config
 from edap_framework.dq.bronze_check import check_bronze_table
 from edap_framework.dq.quarantine import close_superseded_by_resend
 from edap_framework.pipeline import common
+from edap_framework.pipeline.common import PipelineHalt
 
 init_context = common.init_context
 
@@ -50,20 +51,25 @@ def add_meta_properties(ctx):
 
 
 def write_bronze(ctx):
-    """08 - append to the Bronze Delta table (Adhoc: replay without duplicating)."""
+    """08 - append to the Bronze Delta table (Adhoc: replay without duplicating), then apply the Unity Catalog comment and tags."""
     st = ctx.st
     st["count"] = loader.write_bronze(ctx.spark, st["df"], st["spec"], ctx.env, ctx.batch_id, ctx.is_adhoc)
+    loader.apply_governance(ctx.spark, st["spec"], st["spec_path"], ctx.ac.name)
 
 
-def apply_governance(ctx):
-    """09 - Unity Catalog comment and tags from the spec's governance block."""
-    loader.apply_governance(ctx.spark, ctx.st["spec"], ctx.st["spec_path"], ctx.ac.name)
-
-
-def run_dq_and_audit(ctx):
-    """10 - DQX at Bronze (quarantine bad rows), close superseded quarantine rows for corrected resends, write the run log."""
+def run_dq(ctx):
+    """09 - DQX at Bronze: check every new batch, quarantine failing rows, close quarantine rows superseded by a corrected resend."""
     st = ctx.st
     st["dq"] = check_bronze_table(ctx.spark, st["spec"], ctx.env, ctx.variables, ctx.params.get("recheck_batches"))
     if ctx.item.startswith("file-loads/"):
         close_superseded_by_resend(ctx.spark, ctx.env, st["fq"])
-    common.log_run(ctx, "SUCCESS", st["count"], "-> %s; dq %s" % (st["fq"], st["dq"]))
+
+
+def dq_gate_and_notify(ctx):
+    """10 - DQ gate: only a whole-batch failure halts (error rate at/above the limit). Otherwise failing rows stay quarantined and the pipeline
+    continues. The owner is emailed on a halt or a warning with the failed checks; the run log is written either way."""
+    st = ctx.st
+    status = common.gate_and_notify(ctx, list(st["dq"].values()), st["spec"].get("gate"), st["fq"], "bronze")
+    common.log_run(ctx, "HALTED" if status == "HALT" else "SUCCESS", st["count"], "-> %s; dq gate %s" % (st["fq"], status or "nothing new to check"))
+    if status == "HALT":
+        raise PipelineHalt("Bronze %s: %s" % (st["fq"], "; ".join(st["gate"]["reasons"])))

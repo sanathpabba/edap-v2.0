@@ -1,4 +1,4 @@
-"""Commodities / gold / regulatory_reporting / Adhoc - step 08: Run DQX expectations (flag mode).
+"""Commodities / gold / regulatory_reporting / Adhoc - step 08: Run DQX sanity checks (flag mode).
 """
 from edap_framework.pipeline import gold_steps as steps
 

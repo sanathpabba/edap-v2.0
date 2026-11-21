@@ -1,4 +1,4 @@
-"""FixedIncome / bronze / sql_trades / Routine - step 08: Write the Bronze Delta table.
+"""FixedIncome / bronze / sql_trades / Routine - step 08: Write the Bronze Delta table and apply Unity Catalog comment and tags.
 
 Routine mode: Streaming append with checkpoint.
 """

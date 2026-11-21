@@ -1,6 +1,6 @@
-"""Common / landing / api_fx_rates / Adhoc - step 03: Decide what to fetch (watermark window, FX date, file rescan, event offsets).
+"""Common / landing / api_fx_rates / Adhoc - step 03: Decide what to fetch (watermark window, FX date, expected file, event offsets).
 
-Adhoc mode: SQL: --from-ts or a full re-extract. FX: history. Files: --rescan re-registers. Events: replay from the earliest offset.
+Adhoc mode: SQL: --from-ts or a full re-extract. FX: history. Files: --rescan re-checks files already seen. Events: replay from the earliest offset.
 """
 from edap_framework.pipeline import landing_steps as steps
 

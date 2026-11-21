@@ -1,0 +1,10 @@
+"""Common / landing / stream_trade_events / Routine - step 09: Write the run-log entry; halt the pipeline if a whole file was missing or wrong.
+"""
+from edap_framework.pipeline import landing_steps as steps
+
+ITEM = "stream-loads/trade_events"
+STEP = {"order": 9, "name": "audit_log", "layer": "landing", "mode": "Routine"}
+
+
+def run(ctx):
+    steps.audit_log(ctx)

@@ -1,4 +1,4 @@
-"""FX / bronze / sql_trades / Adhoc - step 08: Write the Bronze Delta table.
+"""FX / bronze / sql_trades / Adhoc - step 08: Write the Bronze Delta table and apply Unity Catalog comment and tags.
 
 Adhoc mode: Delete the replayed landing batches, then append: no duplicates.
 """

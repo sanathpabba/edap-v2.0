@@ -3,7 +3,7 @@ environment: dev
 catalog: edap
 storage:
   account: edapdl
-  containers: {landing: landing, bronze: bronze, silver: silver, gold: gold, metadata: metadata}
+  containers: {sourcedrop: sourcedrop, landing: landing, bronze: bronze, silver: silver, gold: gold, metadata: metadata}   # sourcedrop = stand-in for the source system's own storage (SFTP/share)
   uri_template: "abfss://{container}@{account}.dfs.core.windows.net/{path}"
 secrets:
   scope: edap-kv                       # Key Vault-backed Databricks secret scope
@@ -13,5 +13,8 @@ secrets:
     sql_user: sql-admin-user
     sql_password: sql-admin-password
     eventhub_listen: eventhub-listen-connection-string
+    smtp_host: smtp-host                 # notifier (SMTP); create these in Key Vault before enabling email
+    smtp_user: smtp-user
+    smtp_password: smtp-password
 eventhub_namespace: edap-eventhubs-645ca5
 schemas: {bronze: bronze, metadata: metadata, audit: audit}

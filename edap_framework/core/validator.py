@@ -337,4 +337,44 @@ def validate():
         for ent, t in config.load_yaml("definitions/governance/lineage.yml", a.variables())["record_trace"].items():
             if t["silver_table"] not in silver_targets or t["bronze_table"] not in bronze_targets:
                 err("lineage.yml: record_trace %s unresolved for %s" % (ent, a.folder))
+
+    # ---- notifications: owners, gates, file checks
+    nt = config.load_yaml("definitions/governance/notifications.yml")
+    owners = set(nt.get("owners", {}))
+    used = {}
+    for f in _yaml_files():
+        if not any(("/%s/" % d) in f for d in ("bronze", "mappings", "gold_products", "landing")):
+            continue
+        spec = config.load_yaml(f, dummy)
+        if not isinstance(spec, dict):
+            continue
+        for who in ((spec.get("governance") or {}).get("owner"), (spec.get("documentation") or {}).get("owner"), (spec.get("notify") or {}).get("owner")):
+            if who:
+                used.setdefault(who, f)
+        g = spec.get("gate")
+        if g is not None:
+            if not 0 < g.get("max_error_rate", 0.5) <= 1:
+                err("%s: gate.max_error_rate must be in (0, 1]" % f)
+            if not set(g.get("notify_on", [])) <= {"halt", "warn", "pass"}:
+                err("%s: gate.notify_on may only contain halt, warn, pass" % f)
+    for who, f in sorted(used.items()):
+        if who not in owners:
+            err("notifications.yml: owner %s (used in %s) has no entry in owners" % (who, f))
+    dg = nt["defaults"]["gate"]
+    if not 0 < dg["max_error_rate"] <= 1 or not set(dg["notify_on"]) <= {"halt", "warn", "pass"}:
+        err("notifications.yml: defaults.gate is invalid")
+    env = config.load_env()
+    for a in acs:
+        for item in a.items.get("landing", []):
+            if not item.startswith("file-loads/"):
+                continue
+            ls = config.load_yaml("definitions/landing/%s.yml" % item, a.variables())
+            for blk in ("source_drop", "file_checks", "notify"):
+                if blk not in ls:
+                    err("landing/%s.yml: file source needs a %s block" % (item, blk))
+            if ls.get("source_drop", {}).get("container") not in env["storage"]["containers"]:
+                err("landing/%s.yml: source_drop container is not in environments/dev.yml storage.containers" % item)
+            sc = config.load_yaml(ls["source_definition"]).get("columns", {})
+            if set(ls.get("file_checks", {}).get("header", [])) != set(sc):
+                err("landing/%s.yml: file_checks.header differs from the source contract columns" % item)
     return errors, warns

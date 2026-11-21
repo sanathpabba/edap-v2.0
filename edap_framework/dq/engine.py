@@ -54,6 +54,7 @@ def apply_rule_set(spark, df, rule_set, env, batch_id, table_name=None):
     n_warn = checked.where(has_warn & ~has_err).count()
     valid = checked.where(~has_err).drop("_errors", "_warnings") if mode == "quarantine" else checked.drop("_errors", "_warnings")
     now = dt.datetime.utcnow()
+    report = []                                                                # per-rule outcome, handed back to the gate/notifier
 
     # per-rule results (errors and warnings)
     for col, crit in (("_errors", "error"), ("_warnings", "warn")):
@@ -64,6 +65,7 @@ def apply_rule_set(spark, df, rule_set, env, batch_id, table_name=None):
         # rules that found nothing are recorded too (a passing rule is evidence as well)
         rows += [(dq_run, audit.run_id(), layer, table_name, rule_set["rule_set"], batch_id, n, c2.get("criticality", "error"), 0, total, now)
                  for c2 in rule_set["checks"] for n in [c2.get("name")] if n and n not in seen and c2.get("criticality", "error") == crit]
+        report += [{"rule": r[6], "criticality": r[7], "failed_rows": r[8], "total_rows": r[9]} for r in rows]
         if rows:
             spark.sql(RESULTS_DDL.format(t=t["results"]))
             spark.createDataFrame(rows, "dq_run_id string, run_id string, layer string, table_name string, rule_set string, batch_id string, "
@@ -86,7 +88,15 @@ def apply_rule_set(spark, df, rule_set, env, batch_id, table_name=None):
             F.lit(None).cast("timestamp").alias("resolved_ts"), F.lit(None).cast("string").alias("resolution"))
          .write.mode("append").saveAsTable(q))
 
-    stats = {"total": total, "quarantined": n_bad if mode == "quarantine" else 0, "flagged": n_bad if mode == "flag" else 0, "warned": n_warn}
+    samples = []
+    if n_bad:                                                                  # a few failing rows for the owner email
+        cols = [c for c in df.columns]
+        for r in invalid.select(F.transform("_errors", lambda e: e["name"]).alias("rules"), F.to_json(F.struct(*cols)).alias("rec")).limit(5).collect():
+            samples.append({"rules": list(r["rules"]), "record": r["rec"]})
+    stats = {"total": total, "quarantined": n_bad if mode == "quarantine" else 0, "flagged": n_bad if mode == "flag" else 0, "warned": n_warn,
+             "failed_rows": n_bad, "dq_run_id": dq_run, "rule_set": rule_set["rule_set"], "layer": layer, "table": table_name,
+             "mode": mode, "rules": sorted([x for x in report if x["failed_rows"] > 0], key=lambda x: -x["failed_rows"]), "rules_checked": len(rule_set["checks"]),
+             "samples": samples}
     passed = total - stats["quarantined"]
     spark.sql(SUMMARY_DDL.format(t=t["summary"]))
     spark.createDataFrame([(dq_run, audit.run_id(), layer, table_name, rule_set["rule_set"], batch_id, total, passed, stats["quarantined"] + stats["flagged"],

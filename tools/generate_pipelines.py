@@ -18,14 +18,15 @@ LAYER_STEPS = {
     "landing": [
         ("init_context", "Initialise the run: schemas, run id, clock", "", ""),
         ("read_source_yaml", "Read the landing spec and the source contract", "", ""),
-        ("resolve_extract_window", "Decide what to fetch (watermark window, FX date, file rescan, event offsets)",
-         "SQL: stored watermark .. current max. FX: today's daily rates. Files: only new files.",
-         "SQL: --from-ts or a full re-extract. FX: history. Files: --rescan re-registers. Events: replay from the earliest offset."),
-        ("acquire_data", "Read from the source system", "", ""),
-        ("write_landing_files", "Write the raw files to landing", "", ""),
-        ("register_landing_batch", "Register the landed batch (file registry)", "", ""),
+        ("resolve_extract_window", "Decide what to fetch (watermark window, FX date, expected file, event offsets)",
+         "SQL: stored watermark .. current max. FX: today's daily rates. Files: new files in the source drop.",
+         "SQL: --from-ts or a full re-extract. FX: history. Files: --rescan re-checks files already seen. Events: replay from the earliest offset."),
+        ("acquire_data", "Read from the source system (file list from the source drop for files)", "", ""),
+        ("validate_batch", "Whole-file checks (received? readable? right header? not empty?); a wrong file is rejected and the owner emailed", "", ""),
+        ("write_landing_files", "Write the raw files to landing (files: copy good files unchanged from the source drop)", "", ""),
+        ("register_landing_batch", "Register the landed/rejected files (file registry)", "", ""),
         ("advance_watermark", "Advance the SQL watermark after a successful write", "", "Only moves forward; an Adhoc backfill never lowers it."),
-        ("audit_log", "Write the run-log entry", "", ""),
+        ("audit_log", "Write the run-log entry; halt the pipeline if a whole file was missing or wrong", "", ""),
     ],
     "bronze": [
         ("init_context", "Initialise the run: schemas, run id, clock", "", ""),
@@ -36,19 +37,19 @@ LAYER_STEPS = {
         ("shape_columns", "Apply the spec's shaping (JSON extract, payload parse, extra columns)", "", ""),
         ("route_to_asset_class", "Keep only this asset class's rows", "", ""),
         ("add_meta_properties", "Add audit and lineage columns", "", ""),
-        ("write_bronze", "Write the Bronze Delta table", "Streaming append with checkpoint.", "Delete the replayed landing batches, then append: no duplicates."),
-        ("apply_governance", "Apply Unity Catalog comment and tags", "", ""),
-        ("run_dq_and_audit", "Run DQX at Bronze, close superseded quarantine rows, write the run log", "", ""),
+        ("write_bronze", "Write the Bronze Delta table and apply Unity Catalog comment and tags", "Streaming append with checkpoint.", "Delete the replayed landing batches, then append: no duplicates."),
+        ("run_dq", "Run DQX at Bronze, quarantine failing rows, close rows superseded by a corrected file", "", ""),
+        ("dq_gate_and_notify", "DQ gate: halt only if the whole batch is wrong; email the owner on halt or warning; write the run log", "", ""),
     ],
     "silver": [
         ("init_context", "Initialise the run: schemas, run id, clock", "", ""),
         ("read_mapping_yaml", "Read the canonical mapping for the entity", "", ""),
-        ("load_reference_data", "Ensure the reference tables used by the lookups exist", "", ""),
         ("read_bronze_increment", "Read new Bronze rows, minus DQ-quarantined rows", "Since the Silver watermark.", "Since --from-ts, or everything (full rebuild)."),
         ("apply_canonical_mapping", "Map source columns to canonical columns", "", ""),
         ("deduplicate", "Keep one row per business key", "", ""),
-        ("apply_lookups", "Reference-data columns and referential flags", "", ""),
+        ("apply_lookups", "Reference-data columns and referential flags (loads missing reference tables)", "", ""),
         ("run_dq_silver", "Run DQX business rules, quarantine invalid rows", "", ""),
+        ("dq_gate_and_notify", "DQ gate before the merge: halt only if the whole batch is wrong; email the owner on halt or warning", "", ""),
         ("add_meta_properties", "Add Silver audit and lineage columns", "", ""),
         ("merge_and_finalize", "MERGE into the canonical table, advance the watermark, tag, log", "", "The watermark only moves forward."),
     ],
@@ -60,8 +61,8 @@ LAYER_STEPS = {
         ("compose_sql", "Compose the product SQL from the YAML", "", ""),
         ("build_and_write", "Execute the SQL and write the Gold table", "", ""),
         ("apply_documentation", "Apply purpose, grain, owner, refresh as comment and tags", "", ""),
-        ("run_expectations", "Run DQX expectations (flag mode)", "", ""),
-        ("audit_log", "Write the run-log entry", "", ""),
+        ("run_expectations", "Run DQX sanity checks (flag mode)", "", ""),
+        ("notify_and_audit_log", "Email the owner the failed sanity checks (if any); write the run-log entry", "", ""),
     ],
 }
 MODES = ["Routine", "Adhoc"]
@@ -138,7 +139,7 @@ def write_jobs(acs):
     import yaml
     env = [{"environment_key": "edap_env", "spec": {"environment_version": "2", "dependencies": ["pyyaml", "requests", "databricks-labs-dqx"]}}]
     ac_names = [a.folder for a in acs if a.prefix != "common"]
-    tasks = [_task("common_landing", "Common", "landing", "Routine", []), _task("common_bronze", "Common", "bronze", "Routine", ["common_landing"]),
+    tasks = [_task("common_landing", "Common", "landing", "Routine", [], ["--extra", "expect_file=true"]), _task("common_bronze", "Common", "bronze", "Routine", ["common_landing"]),
              _task("common_silver", "Common", "silver", "Routine", ["common_bronze"]), _task("common_gold", "Common", "gold", "Routine", ["common_silver"])]
     for n in ac_names:
         k = n.lower()
@@ -168,6 +169,10 @@ def write_jobs(acs):
                 "parameters": ["--asset-class", "{{job.parameters.asset_class}}", "--layer", "{{job.parameters.layer}}", "--mode", "Adhoc",
                                "--run-id", "{{job.run_id}}", "--extra", "{{job.parameters.extra}}"]}}]},
     }
+    fail_to = config.load_yaml("definitions/governance/notifications.yml").get("job_failure_recipients") or []
+    if fail_to:                                              # crash safety net on top of the custom owner notifier
+        for j in jobs.values():
+            j["email_notifications"] = {"on_failure": fail_to}
     head = ("# Databricks jobs generated by tools/generate_pipelines.py from the pipeline folders. NOT yet deployed or validated.\n"
             "# Common runs first; each asset class then runs bronze -> silver -> gold. Re-generate instead of editing by hand.\n")
     open(os.path.join(ROOT, "deployment", "jobs.yml"), "w").write(head + yaml.dump({"resources": {"jobs": jobs}}, sort_keys=False, width=200))

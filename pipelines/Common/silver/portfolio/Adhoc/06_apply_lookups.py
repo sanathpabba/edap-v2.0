@@ -1,0 +1,10 @@
+"""Common / silver / portfolio / Adhoc - step 06: Reference-data columns and referential flags (loads missing reference tables).
+"""
+from edap_framework.pipeline import silver_steps as steps
+
+ITEM = "portfolio"
+STEP = {"order": 6, "name": "apply_lookups", "layer": "silver", "mode": "Adhoc"}
+
+
+def run(ctx):
+    steps.apply_lookups(ctx)

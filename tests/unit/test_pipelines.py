@@ -110,7 +110,7 @@ def broken_tree(tmp_path):
 
 
 def test_validator_catches_missing_step_file(broken_tree):
-    os.remove(broken_tree / "pipelines/FX/silver/trade/Routine/05_apply_canonical_mapping.py")
+    os.remove(broken_tree / "pipelines/FX/silver/trade/Routine/04_apply_canonical_mapping.py")
     assert any("FX/silver/trade/Routine" in e for e in validate()[0])
 
 
@@ -161,6 +161,30 @@ def test_validator_catches_orphan_table_folder(broken_tree):
 
 
 def test_validator_catches_wrong_item_in_step_file(broken_tree):
-    p = broken_tree / "pipelines/FX/silver/trade/Routine/03_load_reference_data.py"
+    p = broken_tree / "pipelines/FX/silver/trade/Routine/03_read_bronze_increment.py"
     p.write_text(p.read_text().replace('ITEM = "trade"', 'ITEM = "position"'))
     assert any("ITEM must be" in e for e in validate()[0])
+
+
+def test_validator_catches_owner_without_contact_entry(broken_tree):
+    p = broken_tree / "definitions/governance/notifications.yml"
+    p.write_text(p.read_text().replace("  portfolio-data-owner: {email: \"\"}\n", ""))
+    assert any("portfolio-data-owner" in e and "no entry in owners" in e for e in validate()[0])
+
+
+def test_validator_catches_bad_gate_limit(broken_tree):
+    p = broken_tree / "definitions/bronze/file-loads/positions.yml"
+    p.write_text(p.read_text().replace("max_error_rate: 0.5", "max_error_rate: 1.5"))
+    assert any("max_error_rate" in e for e in validate()[0])
+
+
+def test_validator_catches_file_header_drift(broken_tree):
+    p = broken_tree / "definitions/landing/file-loads/positions.yml"
+    p.write_text(p.read_text().replace("position_id, position_date,", "position_id,"))
+    assert any("file_checks.header differs" in e for e in validate()[0])
+
+
+def test_validator_catches_unknown_source_drop_container(broken_tree):
+    p = broken_tree / "definitions/environments/dev.yml"
+    p.write_text(p.read_text().replace("sourcedrop: sourcedrop, ", ""))
+    assert any("source_drop container" in e for e in validate()[0])

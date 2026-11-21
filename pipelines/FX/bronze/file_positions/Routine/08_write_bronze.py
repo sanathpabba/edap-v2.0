@@ -1,4 +1,4 @@
-"""FX / bronze / file_positions / Routine - step 08: Write the Bronze Delta table.
+"""FX / bronze / file_positions / Routine - step 08: Write the Bronze Delta table and apply Unity Catalog comment and tags.
 
 Routine mode: Streaming append with checkpoint.
 """

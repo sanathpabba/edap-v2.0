@@ -24,8 +24,8 @@
 | 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
 | 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
 | 6 | YAML Specification & Framework Core | 9 | 0 | 6 | 0 | 0 | 3 |
-| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 6 | 0 | 0 | 2 |
-| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 6 | 0 | 0 | 0 |
+| 7 | Landing & Bronze (metadata-driven) | 9 | 0 | 7 | 0 | 0 | 2 |
+| 8 | Data Quality (DQX) - Bronze & Silver | 9 | 0 | 9 | 0 | 0 | 0 |
 | 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
 | 10 | Gold Data Products | 6 | 0 | 6 | 0 | 0 | 0 |
 | 11 | Consumption | 3 | 0 | 0 | 0 | 0 | 3 |
@@ -35,9 +35,9 @@
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 3 | 0 | 0 | 0 | 0 | 3 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 2 | 0 | 0 | 3 |
-| | **TOTAL** | **112** | **48** | **39** | **0** | **0** | **25** |
+| | **TOTAL** | **116** | **48** | **43** | **0** | **0** | **25** |
 
-**Verified complete: 48/112 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
+**Verified complete: 48/116 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
 ## Demo scenario this plan builds toward
 
@@ -178,7 +178,7 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
 | FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | deployment/unity_catalog_setup.sql (catalog + 10 schemas); not run |
 | FWK-06 | Packaging | Build wheel, install on cluster, import test | 📋 TODO | P1 | FWK-02 | `import edap_framework` on both workspaces |
-| FWK-07 | Asset-class pipeline structure | pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/ (one folder per table) for Equities, FixedIncome, FX, Commodities plus Common (landing + shared entities); asset-class YAMLs; ${ac} templating; routing by instrument | 🔄 BUILT, NOT VALIDATED | P0 | FWK-02 | definitions/asset_classes/*.yml, pipelines/ (1,174 step files, one folder per table), docs/architecture/pipelines.md; 43 offline tests incl. routing/overlap/negative cases; not run on Databricks |
+| FWK-07 | Asset-class pipeline structure | pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/ (one folder per table) for Equities, FixedIncome, FX, Commodities plus Common (landing + shared entities); asset-class YAMLs; ${ac} templating; routing by instrument | 🔄 BUILT, NOT VALIDATED | P0 | FWK-02 | definitions/asset_classes/*.yml, pipelines/ (1,190 step files, one folder per table), docs/architecture/pipelines.md; 65 offline tests incl. routing/overlap/negative cases; not run on Databricks |
 | FWK-08 | Ordinal step files + sequence runner | 8-10 numbered step files per table and mode, each calling one framework function; pipelines/run.py executes them in order per item; dry-run plan; tools/generate_pipelines.py regenerates the tree | 🔄 BUILT, NOT VALIDATED | P0 | FWK-07 | edap_framework/pipeline/{context,sequence,landing_steps,bronze_steps,silver_steps,gold_steps}.py; dry-run and step-wiring tests pass offline; not run on Databricks |
 | FWK-09 | Routine vs Adhoc behaviours | Same steps, mode-aware: Routine incremental/scheduled; Adhoc initial load, backfill, replay (no duplicates), rebuild, what-if parameters | 🔄 BUILT, NOT VALIDATED | P1 | FWK-08 | Documented in docs/architecture/pipelines.md; replay/rebuild logic in bronze/silver/gold step functions; needs a run to verify |
 
@@ -198,6 +198,7 @@ _Generic ingestion engine driven by YAML for all four sources._
 | BRZ-06 | Schema validation | Expected vs actual schema, drift handling | 📋 TODO | P1 | BRZ-05 | Drift test case |
 | BRZ-07 | Idempotency | Re-run does not duplicate | 📋 TODO | P0 | BRZ-05 | Re-run count unchanged |
 | BRZ-08 | Onboard a source by YAML only | Add a new table with no code changes | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | runners/scaffold_sql_table.py: generates landing+bronze+starter DQ specs from the source contract; reproduces the 5 existing specs exactly (unit test); docs/runbooks/onboard_new_source_table.md; live onboarding demo still to do |
+| BRZ-09 | File landing: source drop to landing with whole-file checks | Position files are checked as a whole (received, readable, header, not empty) in the source drop, good files copied unchanged into landing, wrong ones rejected to quarantine and registered | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-02 | ingestion/files/arrival.py, landing_steps.validate_batch, definitions/landing/file-loads/positions.yml (file_checks); header/not-received/business-day logic unit-tested; not run |
 
 ---
 
@@ -213,6 +214,9 @@ _DQX-based declarative checks from YAML with quarantine._
 | DQ-04 | Quarantine tables | bronze_invalid, silver_invalid with reasons | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | edap.quarantine.bronze_invalid / silver_invalid written by the engine with failed_rules, record_json, status; not run |
 | DQ-05 | DQ metrics | Rule-level counts and pass/fail summary | 🔄 BUILT, NOT VALIDATED | P1 | DQ-01 | monitoring.dq_results (per rule, incl. zero-failure rules) and monitoring.dq_summary (pass rate) written per run; not run |
 | DQ-06 | Remediation + reprocess | Fix and reprocess a quarantined file/record | 🔄 BUILT, NOT VALIDATED | P0 | DQ-04 | dq/quarantine.py close_superseded_by_resend + Silver MERGE on file version; before/after evidence needs a run |
+| DQ-07 | DQ gate (halt only on whole file/batch failure) | Gate turns DQ stats into PASS / WARN / HALT: only a whole-batch failure (error rate at the limit, empty batch) or a missing/wrong file halts; row-level failures are quarantined and the pipeline continues | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | dq/gate.py + pipeline dq_gate_and_notify steps (Bronze 10, Silver 08); 4 gate tests + halting-sequence test pass offline; not run |
+| DQ-08 | Custom owner notifier | Owner emails on halt/warn listing failed checks, counts and sample rows; SMTP via Key Vault; every notification recorded in edap.monitoring.notifications; Adhoc quiet by default | 🔄 BUILT, NOT VALIDATED | P0 | DQ-07 | notify/notifier.py + definitions/governance/notifications.yml; email content, recipient fallback and suppression tests pass offline; SMTP not configured yet |
+| DQ-09 | Gold sanity-check notification | Email the owner the failed Gold sanity checks (Gold never halts) | 🔄 BUILT, NOT VALIDATED | P1 | DQ-07 | gold_steps.notify_and_audit_log; not run |
 
 ---
 

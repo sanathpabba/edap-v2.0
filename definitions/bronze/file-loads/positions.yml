@@ -48,6 +48,9 @@ governance:                         # applied as Unity Catalog comment and tags 
   description: "Raw daily position files, all columns as string"
   owner: portfolio-data-owner
   sensitivity: synthetic
+gate:                               # whole-batch-wrong threshold; row-level failures below it are quarantined and the pipeline continues
+  max_error_rate: 0.5
+  notify_on: [halt, warn]
 checkpoint: {container: bronze, path: _checkpoints/${ac}_file_positions}
 dq:
   rules_file: definitions/dq_rules/bronze/file_positions.yml

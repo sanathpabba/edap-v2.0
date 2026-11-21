@@ -1,4 +1,4 @@
-"""FX / bronze / stream_trade_events / Routine - step 08: Write the Bronze Delta table.
+"""FX / bronze / stream_trade_events / Routine - step 08: Write the Bronze Delta table and apply Unity Catalog comment and tags.
 
 Routine mode: Streaming append with checkpoint.
 """

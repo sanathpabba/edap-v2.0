@@ -1,4 +1,4 @@
-"""Equities / bronze / stream_trade_events / Adhoc - step 08: Write the Bronze Delta table.
+"""Equities / bronze / stream_trade_events / Adhoc - step 08: Write the Bronze Delta table and apply Unity Catalog comment and tags.
 
 Adhoc mode: Delete the replayed landing batches, then append: no duplicates.
 """
