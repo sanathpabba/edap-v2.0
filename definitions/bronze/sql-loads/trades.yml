@@ -1,0 +1,69 @@
+# Bronze spec: raw, append-only copy of source.trades (no cleansing, no dedup - that is Silver's job).
+# Processed on its own (runners/bronze_load.py --source sql-loads --table trades).
+version: 1
+layer: bronze
+source_system: AZURE_SQL_TRADING
+source_object: source.trades
+table: trades
+input:
+  landing_spec: definitions/landing/sql-loads/trades.yml
+  container: landing
+  path: sql/trades
+  format: parquet
+  reader: autoloader                 # cloudFiles, availableNow trigger => incremental by file
+target:
+  catalog: edap
+  schema: bronze
+  table: sql_trades
+  mode: append
+  partition_by: [_ingest_date]
+  properties:
+    delta.enableChangeDataFeed: "true"
+business_key: [trade_no]
+columns:
+    trade_no: string
+    trade_dt: date
+    trade_ts: timestamp
+    settle_dt: date
+    sec_code: string
+    book_cd: string
+    cpty_code: string
+    acct_ref: string
+    side: string
+    qty: decimal(18
+    4): None
+    price: decimal(18
+    6): None
+    trade_ccy: string
+    gross_amt: decimal(22
+    2): None
+    commission: decimal(18
+    fees: decimal(18
+    net_amt: decimal(22
+    trade_status: string
+    version: int
+    trader: string
+    strategy: string
+    created_ts: timestamp
+    last_updated_ts: timestamp
+audit_columns:                       # added by the framework, identical for every Bronze table
+  _source_system: AZURE_SQL_TRADING
+  _source_object: source.trades
+  _batch_id: bronze_run_batch
+  _ingest_ts: current_timestamp
+  _ingest_date: current_date
+  _source_file: file_path
+lineage:
+  landing_batch: path            # landing batch_id read from the landing folder name (batch_id=...)
+  row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
+  stamp: [_run_id, _spec_path, _spec_version, _landing_batch_id]
+governance:                         # applied as Unity Catalog comment and tags on the Bronze table
+  description: "Raw Azure SQL trades, append-only, as extracted"
+  owner: trading-data-owner
+  sensitivity: synthetic
+checkpoint:
+  container: bronze
+  path: _checkpoints/sql_trades
+dq:
+  rules_file: definitions/dq_rules/bronze/sql_trades.yml   # authored in the DQ phase
+  mode: later

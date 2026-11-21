@@ -1,0 +1,46 @@
+# Bronze spec: one row per landed FX envelope; the whole API response is kept as raw JSON text.
+# Flattening rates into rows is a Silver step (history and daily responses differ in shape).
+version: 1
+layer: bronze
+source_system: FX_REST_API
+table: fx_rates
+input:
+  landing_spec: definitions/landing/api-loads/fx_rates.yml
+  container: landing
+  path: fx_rates/inbound
+  format: text                          # each file read whole, so nothing in the envelope is lost
+  reader: autoloader
+  options: {wholetext: "true"}
+json_extract:                           # column -> JSONPath into the envelope text
+  requested_date: "$.requested_date"
+  fetched_at_utc: "$.fetched_at_utc"
+  http_status: "$.http_status"
+  stale: "$.stale"
+  request_url: "$.request"
+  response_json: "$.response"           # nested API response kept as a JSON string
+target:
+  catalog: edap
+  schema: bronze
+  table: api_fx_rates
+  mode: append
+  partition_by: [_ingest_date]
+business_key: [requested_date, _source_file]
+audit_columns:
+  _source_system: FX_REST_API
+  _source_object: frankfurter.dev/v1
+  _batch_id: bronze_run_batch
+  _ingest_ts: current_timestamp
+  _ingest_date: current_date
+  _source_file: file_path
+lineage:
+  landing_batch: registry        # landing batch_id looked up in the landing file registry (edap.audit.file_arrivals)
+  row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
+  stamp: [_run_id, _spec_path, _spec_version, _landing_batch_id]
+governance:                         # applied as Unity Catalog comment and tags on the Bronze table
+  description: "Raw FX API envelopes (response kept as JSON text)"
+  owner: market-data-owner
+  sensitivity: public
+checkpoint: {container: bronze, path: _checkpoints/api_fx_rates}
+dq:
+  rules_file: definitions/dq_rules/bronze/api_fx_rates.yml
+  mode: later

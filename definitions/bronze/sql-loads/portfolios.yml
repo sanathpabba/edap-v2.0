@@ -1,0 +1,52 @@
+# Bronze spec: raw, append-only copy of reference.portfolios (no cleansing, no dedup - that is Silver's job).
+# Processed on its own (runners/bronze_load.py --source sql-loads --table portfolios).
+version: 1
+layer: bronze
+source_system: AZURE_SQL_TRADING
+source_object: reference.portfolios
+table: portfolios
+input:
+  landing_spec: definitions/landing/sql-loads/portfolios.yml
+  container: landing
+  path: sql/portfolios
+  format: parquet
+  reader: autoloader                 # cloudFiles, availableNow trigger => incremental by file
+target:
+  catalog: edap
+  schema: bronze
+  table: sql_portfolios
+  mode: append
+  partition_by: [_ingest_date]
+  properties:
+    delta.enableChangeDataFeed: "true"
+business_key: [book_cd]
+columns:
+    book_cd: string
+    book_name: string
+    business_unit: string
+    base_ccy: string
+    region: string
+    is_active: boolean
+    created_ts: timestamp
+    last_updated_ts: timestamp
+audit_columns:                       # added by the framework, identical for every Bronze table
+  _source_system: AZURE_SQL_TRADING
+  _source_object: reference.portfolios
+  _batch_id: bronze_run_batch
+  _ingest_ts: current_timestamp
+  _ingest_date: current_date
+  _source_file: file_path
+lineage:
+  landing_batch: path            # landing batch_id read from the landing folder name (batch_id=...)
+  row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
+  stamp: [_run_id, _spec_path, _spec_version, _landing_batch_id]
+governance:                         # applied as Unity Catalog comment and tags on the Bronze table
+  description: "Raw Azure SQL portfolios, append-only, as extracted"
+  owner: trading-data-owner
+  sensitivity: synthetic
+checkpoint:
+  container: bronze
+  path: _checkpoints/sql_portfolios
+dq:
+  rules_file: definitions/dq_rules/bronze/sql_portfolios.yml   # authored in the DQ phase
+  mode: later

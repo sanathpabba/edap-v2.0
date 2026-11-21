@@ -1,0 +1,27 @@
+# Landing spec: FX reference rates from the REST API into landing as raw JSON envelopes.
+# Processed alone: runners/landing_api.py --mode history|daily
+version: 1
+layer: landing
+source_system: FX_REST_API
+source_definition: definitions/sources/fx_rates_api.yml
+table: fx_rates
+api:
+  base_url: https://api.frankfurter.dev/v1
+  base_currency: USD
+  symbols: [EUR, GBP, JPY, CHF, AUD, CAD, SGD, HKD]
+  retry: {attempts: 3, backoff_seconds: 2}
+  timeout_seconds: 30
+modes:
+  history: {start_date: "2024-11-18", end_date: business_date, file: "fx_rates_history_{start}_{end}.json"}
+  daily:   {date: business_date, file: "fx_rates_{date}.json"}
+envelope: [request, requested_date, fetched_at_utc, http_status, stale, response]   # response kept as returned
+stale_rule: response.date != requested_date
+target:
+  container: landing
+  path: fx_rates/inbound
+  format: json
+  mode: write_once_per_file
+registry:
+  table: edap.audit.file_arrivals    # every landed FX file is registered with its batch_id (landing lineage)
+audit:
+  run_log: edap.audit.ingestion_runs

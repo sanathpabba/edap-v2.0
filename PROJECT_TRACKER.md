@@ -2,7 +2,7 @@
 
 **Project**: BITS Pilani MBA Business Analytics Dissertation - modular, YAML-driven framework for Capital Markets reporting modernization  
 **Approach**: Phase-wise, **source systems first** (initial + incremental load demo), then the metadata-driven framework  
-**Last Updated**: 2026-11-20  
+**Last Updated**: 2026-11-21  
 
 ## Ground rules
 
@@ -15,29 +15,29 @@
 
 ## Status overview
 
-| Phase | Name | Tasks | Done | Rework | Blocked | Todo |
-|---|---|---|---|---|---|---|
-| 0 | Foundation & Decisions | 12 | 12 | 0 | 0 | 0 |
-| 1 | Source 1 - Azure SQL (initial + incremental) | 12 | 0 | 1 | 0 | 11 |
-| 2 | Source 2 - Position Files (good + bad) | 7 | 0 | 0 | 0 | 7 |
-| 3 | Source 3 - Streaming Trade Events | 7 | 0 | 0 | 0 | 7 |
-| 4 | Source 4 - REST FX Rates | 5 | 0 | 0 | 0 | 5 |
-| 5 | Source Systems Demo Pack | 6 | 0 | 0 | 0 | 6 |
-| 6 | YAML Specification & Framework Core | 6 | 0 | 0 | 0 | 6 |
-| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 0 | 0 | 8 |
-| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 0 | 0 | 6 |
-| 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 0 | 0 | 6 |
-| 10 | Gold Data Products | 6 | 0 | 0 | 0 | 6 |
-| 11 | Consumption | 3 | 0 | 0 | 0 | 3 |
-| 12 | Orchestration | 4 | 0 | 0 | 0 | 4 |
-| 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 4 |
-| 14 | Governance, Security & Lineage | 4 | 0 | 0 | 0 | 4 |
-| 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 5 |
-| 16 | Deployment | 3 | 0 | 0 | 0 | 3 |
-| 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 0 | 5 |
-| | **TOTAL** | **109** | **12** | **1** | **0** | **96** |
+| Phase | Name | Tasks | Done | Built, not validated | Rework | Blocked | Todo |
+|---|---|---|---|---|---|---|---|
+| 0 | Foundation & Decisions | 12 | 12 | 0 | 0 | 0 | 0 |
+| 1 | Source 1 - Azure SQL (initial + incremental) | 12 | 12 | 0 | 0 | 0 | 0 |
+| 2 | Source 2 - Position Files (good + bad) | 7 | 7 | 0 | 0 | 0 | 0 |
+| 3 | Source 3 - Streaming Trade Events | 7 | 7 | 0 | 0 | 0 | 0 |
+| 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
+| 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
+| 6 | YAML Specification & Framework Core | 6 | 0 | 1 | 0 | 0 | 5 |
+| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 5 | 0 | 0 | 3 |
+| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 0 | 0 | 0 | 6 |
+| 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 0 | 0 | 0 | 6 |
+| 10 | Gold Data Products | 6 | 0 | 0 | 0 | 0 | 6 |
+| 11 | Consumption | 3 | 0 | 0 | 0 | 0 | 3 |
+| 12 | Orchestration | 4 | 0 | 0 | 0 | 0 | 4 |
+| 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 0 | 4 |
+| 14 | Governance, Security & Lineage | 4 | 0 | 0 | 0 | 0 | 4 |
+| 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
+| 16 | Deployment | 3 | 0 | 0 | 0 | 0 | 3 |
+| 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 0 | 0 | 5 |
+| | **TOTAL** | **109** | **48** | **6** | **0** | **0** | **55** |
 
-**Verified complete: 12/109 tasks.** (Phase 0 verified 2026-11-20; one task is blocked on the user.)
+**Verified complete: 48/109 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
 ## Demo scenario this plan builds toward
 
@@ -53,7 +53,7 @@
 | Status | Meaning |
 |---|---|
 | ✅ DONE | Completed and verified (evidence recorded) |
-| 🔄 IN PROGRESS | Being worked on |
+| 🔄 BUILT, NOT VALIDATED | Code/YAML written, not yet run or tested (validation deferred by decision) |
 | 📋 TODO | Not started |
 | ♻️ REWORK | Exists from 1.0 but failed the audit; fix before reuse |
 | ⏸️ BLOCKED | Waiting on a dependency or decision |
@@ -90,18 +90,18 @@ _Repair the SQL source and make initial and incremental loads demonstrable._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| SQL-01 | Schema review vs spec | Compare 1.0 tables with the spec: add trade currency, check watermark columns | ♻️ REWORK | P0 | FND-05 | Gap list + DDL diff |
-| SQL-02 | Idempotent DDL scripts | Rewrite/verify create-schema, tables, constraints, indexes; safe to re-run | 📋 TODO | P0 | SQL-01 | Script re-run produces no errors/changes |
-| SQL-03 | Reference data redesign | Instruments (type-consistent price/currency/exchange), portfolios, accounts, counterparties on the master ID standard | 📋 TODO | P0 | FND-05 | Row counts + domain checks pass |
-| SQL-04 | Account-portfolio consistency | Fix 582 trades whose account belongs to a different portfolio | 📋 TODO | P0 | SQL-03 | Query shows 0 mismatches |
-| SQL-05 | Realistic trade lifecycle | Statuses/types follow a believable lifecycle (NEW->EXECUTED->SETTLED; amend/cancel link to an original trade) | 📋 TODO | P0 | SQL-03 | Distribution + lifecycle validation queries |
-| SQL-06 | Realistic prices & notionals | Price/quantity depend on instrument type; add trade currency | 📋 TODO | P1 | SQL-03 | Profile query within agreed ranges |
-| SQL-07 | Initial load (D0) | Generate ~5,000 trades + reference data from the generator (seeded, reproducible) | 📋 TODO | P0 | SQL-02..06 | Counts + FK integrity + checksums recorded |
-| SQL-08 | Incremental scenario (D1) | Generator applies inserts + updates + cancels with new last_updated_ts; known counts | 📋 TODO | P0 | SQL-07 | Expected delta counts documented and verified |
-| SQL-09 | Incremental scenario (D2) | Second increment incl. late update to an old trade (late-arriving case) | 📋 TODO | P1 | SQL-08 | Delta verified |
-| SQL-10 | Validation script | Repeatable checks: counts, FKs, nulls, domains, arithmetic, watermark coverage | 📋 TODO | P0 | SQL-07 | Script output saved in docs/dissertation_evidence |
-| SQL-11 | Generator under source_generators/ | Config-driven (YAML) generator, seed, volumes, scenario switch D0/D1/D2 | 📋 TODO | P1 | SQL-07 | `generate --scenario d1` works |
-| SQL-12 | Source README + runbook | How to reset, load D0, apply D1/D2, validate | 📋 TODO | P1 | SQL-10 | Runbook followed from scratch successfully |
+| SQL-01 | Schema review vs spec | Compare 1.0 tables with the spec: add trade currency, check watermark columns | ✅ DONE | P0 | FND-05 | Spec gaps closed in DDL (trade_ccy, last_updated_ts watermarks, outbox); source_generators/azure_sql/ddl/01_schema_and_tables.sql |
+| SQL-02 | Idempotent DDL scripts | Rewrite/verify create-schema, tables, constraints, indexes; safe to re-run | ✅ DONE | P0 | SQL-01 | DDL drops/recreates idempotently; d0 re-run during the 2026-11-20 rebuild succeeded |
+| SQL-03 | Reference data redesign | Instruments (type-consistent price/currency/exchange), portfolios, accounts, counterparties on the master ID standard | ✅ DONE | P0 | FND-05 | 100 instruments/20 portfolios/30 accounts/50 counterparties on master IDs; validate.py ID-format checks 0 violations |
+| SQL-04 | Account-portfolio consistency | Fix 582 trades whose account belongs to a different portfolio | ✅ DONE | P0 | SQL-03 | Check 'trade account belongs to trade portfolio' = 0 mismatches (1.0 had 582); docs/dissertation_evidence/sql_validation_d2.md |
+| SQL-05 | Realistic trade lifecycle | Statuses/types follow a believable lifecycle (NEW->EXECUTED->SETTLED; amend/cancel link to an original trade) | ✅ DONE | P0 | SQL-03 | Lifecycle + status-mix + 'no event precedes execution' checks pass; defect found and fixed by verification (later()) |
+| SQL-06 | Realistic prices & notionals | Price/quantity depend on instrument type; add trade currency | ✅ DONE | P1 | SQL-03 | Prices within 2% of daily market price (0 of 4,901 outside); max notional USD 20.6M; trade_ccy = instrument ccy |
+| SQL-07 | Initial load (D0) | Generate ~5,000 trades + reference data from the generator (seeded, reproducible) | ✅ DONE | P0 | SQL-02..06 | D0: 5,000 trades; sql_validation_d0.md 22/22 |
+| SQL-08 | Incremental scenario (D1) | Generator applies inserts + updates + cancels with new last_updated_ts; known counts | ✅ DONE | P0 | SQL-07 | D1: +120 new trades; sql_validation_d1.md 23/23; watermark delta found 65 rows after rebuild (<= 132 bound) |
+| SQL-09 | Incremental scenario (D2) | Second increment incl. late update to an old trade (late-arriving case) | ✅ DONE | P1 | SQL-08 | D2: +90 new, 78 updated, incl. 6 late corrections to trades > 30 days old; watermark delta 168 = expected; 25/25 |
+| SQL-10 | Validation script | Repeatable checks: counts, FKs, nulls, domains, arithmetic, watermark coverage | ✅ DONE | P0 | SQL-07 | azure_sql/validate.py: 25 checks at D2 all PASS; reports in docs/dissertation_evidence/ |
+| SQL-11 | Generator under source_generators/ | Config-driven (YAML) generator, seed, volumes, scenario switch D0/D1/D2 | ✅ DONE | P1 | SQL-07 | source_generators/ (seed 20261116, config/generation.yml, d0/d1/d2 switch) |
+| SQL-12 | Source README + runbook | How to reset, load D0, apply D1/D2, validate | ✅ DONE | P1 | SQL-10 | docs/runbooks/demo_scenarios.md (counts need refresh after rebuild) |
 
 ---
 
@@ -111,13 +111,13 @@ _Daily position extracts on the master ID standard with deliberate defects._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| FILE-01 | File schema (YAML) | Position CSV schema as a definition file | 📋 TODO | P0 | FND-05 | definitions/sources/positions.yml |
-| FILE-02 | Generator from real keys | Generate positions from the actual SQL reference keys (~2,000 rows total) | 📋 TODO | P0 | SQL-07 | Join to reference data = 100% on good files |
-| FILE-03 | Good files D0/D1 | positions_YYYYMMDD.csv for initial and next day | 📋 TODO | P0 | FILE-02 | Files + row counts documented |
-| FILE-04 | Bad file with all defect types | Missing portfolio, duplicate position_id, invalid quantity, invalid currency, unknown instrument, invalid date | 📋 TODO | P0 | FILE-02 | Each defect type counted in a manifest |
-| FILE-05 | ADLS landing structure | landing/positions/{inbound,processed,archive,quarantine} | 📋 TODO | P0 | FND-01 | `az storage fs` listing |
-| FILE-06 | Upload scripts | Drop good file / drop bad file into inbound (simulates arrival) | 📋 TODO | P1 | FILE-05 | Both files visible in inbound |
-| FILE-07 | README | File source patterns and demo steps | 📋 TODO | P2 | FILE-06 | Doc reviewed |
+| FILE-01 | File schema (YAML) | Position CSV schema as a definition file | ✅ DONE | P0 | FND-05 | definitions/sources/positions_file.yml |
+| FILE-02 | Generator from real keys | Generate positions from the actual SQL reference keys (~2,000 rows total) | ✅ DONE | P0 | SQL-07 | Positions derived from SQL trades; keys validated against SQL reference data |
+| FILE-03 | Good files D0/D1 | positions_YYYYMMDD.csv for initial and next day | ✅ DONE | P0 | FILE-02 | positions_20261116.csv (1,296 rows), positions_20261117.csv (1,305 rows); position_files_validation.md PASS |
+| FILE-04 | Bad file with all defect types | Missing portfolio, duplicate position_id, invalid quantity, invalid currency, unknown instrument, invalid date | ✅ DONE | P0 | FILE-02 | D2 bad file: 1,312 rows with 41 defects; independent validator detected == injected (10/6/8/7/5/5); corrected _v2 file also produced |
+| FILE-05 | ADLS landing structure | landing/positions/{inbound,processed,archive,quarantine} | ✅ DONE | P0 | FND-01 | landing/positions/{inbound,processed,archive,quarantine} created in ADLS edapdl |
+| FILE-06 | Upload scripts | Drop good file / drop bad file into inbound (simulates arrival) | ✅ DONE | P1 | FILE-05 | demo.py d0/d1/d2/fix-d2 upload files to landing/positions/inbound; rebuild run 2026-11-20 uploaded all 4 files |
+| FILE-07 | README | File source patterns and demo steps | ✅ DONE | P2 | FILE-06 | Covered in docs/runbooks/demo_scenarios.md |
 
 ---
 
@@ -127,13 +127,13 @@ _Event Hubs events that tie back to real trades, with lifecycle and defects._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| STR-01 | Event schema (YAML) | Event payload definition (event_id, trade_id, types TRADE_EXECUTED/AMENDED/CANCELLED/SETTLED) | 📋 TODO | P0 | FND-05 | definitions/sources/trade_events.yml |
-| STR-02 | Producer from real keys | Events reference real trade/instrument/portfolio IDs; all 9 currencies | 📋 TODO | P0 | SQL-07 | Join to SQL trades >= expected % |
-| STR-03 | Lifecycle & edge cases | Duplicates, out-of-order, late-arriving, malformed events (controlled counts) | 📋 TODO | P0 | STR-02 | Manifest of injected anomalies |
-| STR-04 | Send burst D0 / D1 | Publish initial burst and a later burst to trade-events hub | 📋 TODO | P0 | STR-03 | Event Hubs IncomingMessages metric = expected |
-| STR-05 | Consumer verification | Read back from Event Hubs (Kafka endpoint) to confirm payloads | 📋 TODO | P1 | STR-04 | Sample of consumed events |
-| STR-06 | Security | Connection string from Key Vault; Send-only/Listen-only policies | 📋 TODO | P1 | FND-07 | No shared root key in use |
-| STR-07 | README | Streaming source runbook | 📋 TODO | P2 | STR-04 | Doc reviewed |
+| STR-01 | Event schema (YAML) | Event payload definition (event_id, trade_id, types TRADE_EXECUTED/AMENDED/CANCELLED/SETTLED) | ✅ DONE | P0 | FND-05 | definitions/sources/trade_events.yml |
+| STR-02 | Producer from real keys | Events reference real trade/instrument/portfolio IDs; all 9 currencies | ✅ DONE | P0 | SQL-07 | Stream sample: 1,281 of 1,281 messages complete and resolve to SQL trades with matching keys |
+| STR-03 | Lifecycle & edge cases | Duplicates, out-of-order, late-arriving, malformed events (controlled counts) | ✅ DONE | P0 | STR-02 | Manifests: duplicates 104, out-of-order 210, malformed 18, late-arriving via held-back events (events_d0..d2.json) |
+| STR-04 | Send burst D0 / D1 | Publish initial burst and a later burst to trade-events hub | ✅ DONE | P0 | STR-03 | Producer manifests D0 10,276 / D1 225 / D2 160 = 10,661 messages; Event Hubs IncomingMessages metric matches (since rebuild) |
+| STR-05 | Consumer verification | Read back from Event Hubs (Kafka endpoint) to confirm payloads | ✅ DONE | P1 | STR-04 | verify_sources.py bounded sample read via listen policy; full read-back is done by Bronze streaming (Phase 7) |
+| STR-06 | Security | Connection string from Key Vault; Send-only/Listen-only policies | ✅ DONE | P1 | FND-07 | Send-only (producer-send) and listen-only (consumer-listen) policies; secrets only in Key Vault |
+| STR-07 | README | Streaming source runbook | ✅ DONE | P2 | STR-04 | Covered in docs/runbooks/demo_scenarios.md |
 
 ---
 
@@ -143,11 +143,11 @@ _Real FX rates for all instrument/portfolio currencies._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| API-01 | API choice + schema (YAML) | Public no-credential FX API; rate_date, base, quote, rate, source | 📋 TODO | P0 | - | definitions/sources/fx_rates.yml |
-| API-02 | Currency coverage | Cover AUD, CAD, CHF, EUR, GBP, HKD, JPY, SGD, USD | 📋 TODO | P0 | API-01 | All pairs returned |
-| API-03 | Client with retry/validation | Retry, status check, timestamp, stale-data flag | 📋 TODO | P1 | API-01 | Failure-path test (forced error) |
-| API-04 | Capture raw responses | Save JSON responses (landing) for D0 and D1 dates | 📋 TODO | P0 | API-03 | Files in landing/fx_rates |
-| API-05 | README | API source notes | 📋 TODO | P2 | API-04 | Doc reviewed |
+| API-01 | API choice + schema (YAML) | Public no-credential FX API; rate_date, base, quote, rate, source | ✅ DONE | P0 | - | definitions/sources/fx_rates_api.yml (frankfurter.dev, no credentials) |
+| API-02 | Currency coverage | Cover AUD, CAD, CHF, EUR, GBP, HKD, JPY, SGD, USD | ✅ DONE | P0 | API-01 | FX history covers all 9 currencies (USD base + 8); cross-source check PASS |
+| API-03 | Client with retry/validation | Retry, status check, timestamp, stale-data flag | ✅ DONE | P1 | API-01 | FxClient retry/backoff + payload validation; forced-failure and missing-currency paths tested; stale flag |
+| API-04 | Capture raw responses | Save JSON responses (landing) for D0 and D1 dates | ✅ DONE | P0 | API-03 | fx_rates_history (509 days), daily 20261117/20261118, stale weekend file in landing/fx_rates/inbound |
+| API-05 | README | API source notes | ✅ DONE | P2 | API-04 | Covered in docs/runbooks/demo_scenarios.md |
 
 ---
 
@@ -157,12 +157,12 @@ _Package all four sources into one repeatable initial + incremental demo._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| SRC-01 | Scenario definition | Define D0 (initial), D1, D2 across all four sources with expected counts | 📋 TODO | P0 | Phases 1-4 | docs/runbooks/demo_scenarios.md |
-| SRC-02 | One-command reset | Reset all sources to a clean state | 📋 TODO | P0 | SRC-01 | Reset runs clean twice in a row |
-| SRC-03 | One-command D0 load | Initial load for SQL, files, events, FX | 📋 TODO | P0 | SRC-02 | Post-load verification report |
-| SRC-04 | One-command D1/D2 | Apply incremental changes across sources | 📋 TODO | P0 | SRC-03 | Delta verification report |
-| SRC-05 | Cross-source consistency check | IDs join across SQL, files, events, FX currencies | 📋 TODO | P0 | SRC-03 | Report: 100% key resolution (except planned defects) |
-| SRC-06 | Source evidence capture | Screenshots/queries for the dissertation (sources chapter) | 📋 TODO | P1 | SRC-04 | Files in docs/dissertation_evidence |
+| SRC-01 | Scenario definition | Define D0 (initial), D1, D2 across all four sources with expected counts | ✅ DONE | P0 | Phases 1-4 | docs/runbooks/demo_scenarios.md |
+| SRC-02 | One-command reset | Reset all sources to a clean state | ✅ DONE | P0 | SRC-01 | demo.py reset --yes executed 2026-11-20 (hub recreated, landing cleared) then full rebuild succeeded; reset needed one flag fix |
+| SRC-03 | One-command D0 load | Initial load for SQL, files, events, FX | ✅ DONE | P0 | SRC-02 | demo.py d0 executed for all four sources |
+| SRC-04 | One-command D1/D2 | Apply incremental changes across sources | ✅ DONE | P0 | SRC-03 | demo.py d1, d2, fix-d2, stale-fx executed |
+| SRC-05 | Cross-source consistency check | IDs join across SQL, files, events, FX currencies | ✅ DONE | P0 | SRC-03 | docs/dissertation_evidence/cross_source_verification.md: 8/8 checks pass |
+| SRC-06 | Source evidence capture | Screenshots/queries for the dissertation (sources chapter) | 📋 TODO | P1 | SRC-04 | Remaining: screenshots/queries for dissertation chapter; validation reports already in docs/dissertation_evidence/ |
 
 ---
 
@@ -175,7 +175,7 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | FWK-01 | YAML schemas | Contracts for source, ingestion, mapping, DQ rules, reference data, Gold product, consumption | 📋 TODO | P0 | FND-05, FND-06 | definitions/ examples validate against schema |
 | FWK-02 | Config loader + validator | Load/validate YAML, environment overlays, clear errors | 📋 TODO | P0 | FWK-01 | Unit tests |
 | FWK-03 | Run context | run_id/batch_id, logging, environment | 📋 TODO | P0 | FWK-02 | Unit tests |
-| FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 📋 TODO | P0 | FND-06 | Tables created from YAML |
+| FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
 | FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 📋 TODO | P0 | FND-06 | Catalog Explorer screenshot |
 | FWK-06 | Packaging | Build wheel, install on cluster, import test | 📋 TODO | P1 | FWK-02 | `import edap_framework` on both workspaces |
 
@@ -187,11 +187,11 @@ _Generic ingestion engine driven by YAML for all four sources._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| BRZ-01 | Generic reader - SQL | JDBC read, full + incremental by watermark | 📋 TODO | P0 | FWK-04 | D0 then D1 delta only |
-| BRZ-02 | Generic reader - files | Auto Loader / batch on inbound, file registry | 📋 TODO | P0 | FWK-04 | Good + bad file ingested |
-| BRZ-03 | Generic reader - streaming | Structured Streaming from Event Hubs, checkpoint | 📋 TODO | P0 | FWK-04 | Events landed with offsets |
-| BRZ-04 | Generic reader - REST | API pull to landing then Bronze | 📋 TODO | P1 | FWK-04 | FX rows in Bronze |
-| BRZ-05 | Bronze writer + audit columns | Standard _source/_ingestion/_batch/_run/_hash columns | 📋 TODO | P0 | BRZ-01 | Columns present on all Bronze tables |
+| BRZ-01 | Generic reader - SQL | JDBC read, full + incremental by watermark | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | edap_framework/ingestion/sql/extract.py + definitions/landing|bronze/sql-loads/*.yml (5 tables); not run |
+| BRZ-02 | Generic reader - files | Auto Loader / batch on inbound, file registry | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/files/arrival.py + file-loads/positions.yml (landing + bronze); not run |
+| BRZ-03 | Generic reader - streaming | Structured Streaming from Event Hubs, checkpoint | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/streaming/eventhub_to_landing.py + stream-loads/trade_events.yml; not run |
+| BRZ-04 | Generic reader - REST | API pull to landing then Bronze | 🔄 BUILT, NOT VALIDATED | P1 | FWK-04 | ingestion/rest_api/fx_pull.py + api-loads/fx_rates.yml; not run |
+| BRZ-05 | Bronze writer + audit columns | Standard _source/_ingestion/_batch/_run/_hash columns | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | bronze/loader.py adds _source_system/_source_object/_source_file/_landing_batch_id/_batch_id/_run_id/_row_hash/_spec_path/_spec_version/_ingest_ts/_ingest_date + UC comment and tags from spec; not run |
 | BRZ-06 | Schema validation | Expected vs actual schema, drift handling | 📋 TODO | P1 | BRZ-05 | Drift test case |
 | BRZ-07 | Idempotency | Re-run does not duplicate | 📋 TODO | P0 | BRZ-05 | Re-run count unchanged |
 | BRZ-08 | Onboard a source by YAML only | Add a new table with no code changes | 📋 TODO | P0 | BRZ-01 | Demo of onboarding |

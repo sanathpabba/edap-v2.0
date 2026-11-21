@@ -1,0 +1,23 @@
+# Landing spec: Event Hubs -> raw JSON files in landing (replayable). Processed alone: runners/landing_stream.py
+version: 1
+layer: landing
+source_system: TRADING_EVENTS
+source_definition: definitions/sources/trade_events.yml
+table: trade_events
+source:
+  kafka_bootstrap: "{eventhub_namespace}.servicebus.windows.net:9093"   # Event Hubs Kafka endpoint
+  topic: trade-events
+  security: sasl_ssl_plain_connection_string
+  secret_key: eventhub_listen          # logical name in definitions/environments/*.yml
+  starting_offsets: earliest
+  max_offsets_per_trigger: 20000
+envelope_columns: [key, value, topic, partition, offset, timestamp]   # value kept as the untouched raw string
+target:
+  container: landing
+  path: events/trade_events            # events/trade_events/ingest_date=YYYY-MM-DD/
+  format: json
+  mode: append
+trigger: available_now                 # drains what is in the hub, then stops (job-friendly)
+checkpoint: {container: landing, path: _checkpoints/trade_events}
+audit:
+  run_log: edap.audit.ingestion_runs

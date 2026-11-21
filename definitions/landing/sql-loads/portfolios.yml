@@ -1,0 +1,34 @@
+# Landing spec: extract reference.portfolios from Azure SQL and write Parquet files into ADLS landing.
+# Processed on its own (runners/landing_sql.py --table portfolios); no other source or table is touched.
+version: 1
+layer: landing
+source_system: AZURE_SQL_TRADING
+source_definition: definitions/sources/azure_sql_trading.yml
+table: portfolios
+source_object: reference.portfolios
+extract:
+  method: jdbc
+  load_type: incremental            # first run (no stored watermark) = full initial load; later runs = delta
+  watermark_column: last_updated_ts
+  initial_load: full
+  fetch_size: 5000
+  num_partitions: 1
+  columns:
+    - book_cd
+    - book_name
+    - business_unit
+    - base_ccy
+    - region
+    - is_active
+    - created_ts
+    - last_updated_ts
+target:
+  container: landing
+  path: sql/portfolios                    # files land under sql/portfolios/ingest_date=YYYY-MM-DD/batch_id=<id>/
+  format: parquet
+  mode: append
+watermark:
+  store: edap.metadata.watermarks    # key = AZURE_SQL_TRADING.reference.portfolios
+  advance_after_success: true        # watermark moves only after the landing write succeeded
+audit:
+  run_log: edap.audit.ingestion_runs

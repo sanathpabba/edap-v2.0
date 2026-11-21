@@ -1,0 +1,60 @@
+# Bronze spec: raw trade events. Keeps the untouched payload (raw_value) AND a permissive typed parse,
+# so malformed messages stay visible (typed columns null, raw_value intact). No dedup here.
+version: 1
+layer: bronze
+source_system: TRADING_EVENTS
+table: trade_events
+input:
+  landing_spec: definitions/landing/stream-loads/trade_events.yml
+  container: landing
+  path: events/trade_events
+  format: json
+  reader: autoloader
+  schema: {key: string, value: string, topic: string, partition: int, offset: long, timestamp: timestamp}
+target:
+  catalog: edap
+  schema: bronze
+  table: stream_trade_events
+  mode: append
+  partition_by: [_ingest_date]
+business_key: [event_id]
+raw_column: raw_value
+parse:
+  from: value
+  format: json
+  mode: permissive                      # from_json -> null fields on malformed JSON
+  columns:
+    event_id: string
+    trade_id: string
+    instrument_id: string
+    portfolio_id: string
+    counterparty_id: string
+    trade_type: string
+    quantity: double
+    price: double
+    currency: string
+    event_type: string
+    event_timestamp: string
+transport_columns:                      # Event Hubs metadata kept for lineage/replay/ordering analysis
+  eh_partition: partition
+  eh_offset: offset
+  eh_enqueued_ts: timestamp
+audit_columns:
+  _source_system: TRADING_EVENTS
+  _source_object: trade-events
+  _batch_id: bronze_run_batch
+  _ingest_ts: current_timestamp
+  _ingest_date: current_date
+  _source_file: file_path
+lineage:
+  landing_batch: path            # landing batch_id read from the landing folder name (batch_id=...)
+  row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
+  stamp: [_run_id, _spec_path, _spec_version, _landing_batch_id]
+governance:                         # applied as Unity Catalog comment and tags on the Bronze table
+  description: "Raw trade lifecycle events from Event Hubs, raw payload plus permissive parse"
+  owner: trading-data-owner
+  sensitivity: synthetic
+checkpoint: {container: bronze, path: _checkpoints/stream_trade_events}
+dq:
+  rules_file: definitions/dq_rules/bronze/stream_trade_events.yml
+  mode: later

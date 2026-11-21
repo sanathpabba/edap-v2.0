@@ -1,0 +1,16 @@
+# Environment settings (no secrets). Specs refer to containers/paths; this file resolves them.
+environment: dev
+catalog: edap
+storage:
+  account: edapdl
+  containers: {landing: landing, bronze: bronze, silver: silver, gold: gold, metadata: metadata}
+  uri_template: "abfss://{container}@{account}.dfs.core.windows.net/{path}"
+secrets:
+  scope: edap-kv                       # Key Vault-backed Databricks secret scope
+  keys:                                # logical name -> secret name in the scope
+    sql_server: sql-server-name
+    sql_database: sql-database-name
+    sql_user: sql-admin-user
+    sql_password: sql-admin-password
+    eventhub_listen: eventhub-listen-connection-string
+schemas: {bronze: bronze, metadata: metadata, audit: audit}

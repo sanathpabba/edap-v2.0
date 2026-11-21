@@ -1,0 +1,22 @@
+# Landing spec: daily position extract. The source system drops CSV files into landing/positions/inbound;
+# the landing step only registers arrival (no content change). Processed alone: runners/landing_files.py
+version: 1
+layer: landing
+source_system: PORTFOLIO_SYS_FILES
+source_definition: definitions/sources/positions_file.yml
+table: positions
+arrival:
+  container: landing
+  inbound_path: positions/inbound
+  processed_path: positions/processed
+  quarantine_path: positions/quarantine
+  archive_path: positions/archive
+  file_pattern: '^positions_(\d{8})(_v(\d+))?\.csv$'      # date + optional resend version
+  business_date_group: 1
+  version_group: 3
+registry:
+  table: edap.audit.file_arrivals      # file name, size, business date, version, arrived_ts, status
+  duplicate_file_rule: skip_if_same_name_and_size
+corrected_resend: replaces_quarantined_file_with_same_business_date
+audit:
+  run_log: edap.audit.ingestion_runs

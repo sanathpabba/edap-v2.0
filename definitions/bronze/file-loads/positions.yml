@@ -1,0 +1,51 @@
+# Bronze spec: raw CSV positions. Every column is read as string so bad values are kept, not dropped.
+version: 1
+layer: bronze
+source_system: PORTFOLIO_SYS_FILES
+table: positions
+input:
+  landing_spec: definitions/landing/file-loads/positions.yml
+  container: landing
+  path: positions/inbound
+  format: csv
+  reader: autoloader
+  options: {header: "true", delimiter: ",", mode: PERMISSIVE, rescuedDataColumn: _rescued_data}
+target:
+  catalog: edap
+  schema: bronze
+  table: file_positions
+  mode: append
+  partition_by: [_ingest_date]
+business_key: [position_id]
+columns:
+  position_id: string
+  position_date: string
+  portfolio_ref: string
+  instrument_code: string
+  position_qty: string
+  avg_cost: string
+  market_value: string
+  ccy: string
+  source_system: string
+extra_columns:
+  file_business_date: regexp_extract(_source_file, 'positions_(\d{8})', 1)
+  file_version: coalesce(nullif(regexp_extract(_source_file, '_v(\d+)\.csv', 1), ''), '1')
+audit_columns:
+  _source_system: PORTFOLIO_SYS_FILES
+  _source_object: positions_*.csv
+  _batch_id: bronze_run_batch
+  _ingest_ts: current_timestamp
+  _ingest_date: current_date
+  _source_file: file_path
+lineage:
+  landing_batch: registry        # landing batch_id looked up in the landing file registry (edap.audit.file_arrivals)
+  row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
+  stamp: [_run_id, _spec_path, _spec_version, _landing_batch_id]
+governance:                         # applied as Unity Catalog comment and tags on the Bronze table
+  description: "Raw daily position files, all columns as string"
+  owner: portfolio-data-owner
+  sensitivity: synthetic
+checkpoint: {container: bronze, path: _checkpoints/file_positions}
+dq:
+  rules_file: definitions/dq_rules/bronze/file_positions.yml
+  mode: later
