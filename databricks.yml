@@ -1,6 +1,9 @@
 bundle:
   name: edap
 
+include:
+  - deployment/jobs.yml        # draft job definitions (schedule, file-arrival, event drain, silver/gold build); not yet deployed
+
 targets:
   dev:
     default: true

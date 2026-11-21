@@ -1,8 +1,4 @@
-databricks-sdk
-databricks-labs-dqx
-pyspark
-pandas
-pyodbc
-requests
+# Runtime dependencies of the framework (job environment on Databricks)
 pyyaml
-pytest
+requests
+databricks-labs-dqx

@@ -21,16 +21,16 @@ target:
     delta.enableChangeDataFeed: "true"
 business_key: [cpty_code]
 columns:
-    cpty_code: string
-    cpty_name: string
-    cpty_type: string
-    country: string
-    risk_category: string
-    credit_rating: string
-    lei: string
-    is_active: boolean
-    created_ts: timestamp
-    last_updated_ts: timestamp
+  cpty_code: string
+  cpty_name: string
+  cpty_type: string
+  country: string
+  risk_category: string
+  credit_rating: string
+  lei: string
+  is_active: boolean
+  created_ts: timestamp
+  last_updated_ts: timestamp
 audit_columns:                       # added by the framework, identical for every Bronze table
   _source_system: AZURE_SQL_TRADING
   _source_object: reference.counterparties

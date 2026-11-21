@@ -1,0 +1,7 @@
+# Local development: unit tests, source generators, offline validation
+-r requirements.txt
+pytest
+pyodbc
+azure-eventhub
+python-dateutil
+databricks-sdk

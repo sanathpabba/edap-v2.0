@@ -21,14 +21,14 @@ target:
     delta.enableChangeDataFeed: "true"
 business_key: [book_cd]
 columns:
-    book_cd: string
-    book_name: string
-    business_unit: string
-    base_ccy: string
-    region: string
-    is_active: boolean
-    created_ts: timestamp
-    last_updated_ts: timestamp
+  book_cd: string
+  book_name: string
+  business_unit: string
+  base_ccy: string
+  region: string
+  is_active: boolean
+  created_ts: timestamp
+  last_updated_ts: timestamp
 audit_columns:                       # added by the framework, identical for every Bronze table
   _source_system: AZURE_SQL_TRADING
   _source_object: reference.portfolios

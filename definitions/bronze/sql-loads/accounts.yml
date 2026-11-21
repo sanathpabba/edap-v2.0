@@ -21,15 +21,15 @@ target:
     delta.enableChangeDataFeed: "true"
 business_key: [acct_ref]
 columns:
-    acct_ref: string
-    acct_name: string
-    acct_type: string
-    ccy: string
-    book_cd: string
-    custodian: string
-    is_active: boolean
-    created_ts: timestamp
-    last_updated_ts: timestamp
+  acct_ref: string
+  acct_name: string
+  acct_type: string
+  ccy: string
+  book_cd: string
+  custodian: string
+  is_active: boolean
+  created_ts: timestamp
+  last_updated_ts: timestamp
 audit_columns:                       # added by the framework, identical for every Bronze table
   _source_system: AZURE_SQL_TRADING
   _source_object: reference.accounts

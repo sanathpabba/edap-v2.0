@@ -21,20 +21,19 @@ target:
     delta.enableChangeDataFeed: "true"
 business_key: [sec_code]
 columns:
-    sec_code: string
-    sec_name: string
-    sec_type: string
-    ccy: string
-    exchange: string
-    ticker: string
-    isin: string
-    sector: string
-    country: string
-    contract_size: decimal(18
-    6): None
-    is_active: boolean
-    created_ts: timestamp
-    last_updated_ts: timestamp
+  sec_code: string
+  sec_name: string
+  sec_type: string
+  ccy: string
+  exchange: string
+  ticker: string
+  isin: string
+  sector: string
+  country: string
+  contract_size: "decimal(18,6)"
+  is_active: boolean
+  created_ts: timestamp
+  last_updated_ts: timestamp
 audit_columns:                       # added by the framework, identical for every Bronze table
   _source_system: AZURE_SQL_TRADING
   _source_object: reference.instruments

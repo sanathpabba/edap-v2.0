@@ -23,19 +23,19 @@
 | 3 | Source 3 - Streaming Trade Events | 7 | 7 | 0 | 0 | 0 | 0 |
 | 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
 | 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
-| 6 | YAML Specification & Framework Core | 6 | 0 | 2 | 0 | 0 | 4 |
-| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 5 | 0 | 0 | 3 |
+| 6 | YAML Specification & Framework Core | 6 | 0 | 3 | 0 | 0 | 3 |
+| 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 6 | 0 | 0 | 2 |
 | 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 6 | 0 | 0 | 0 |
 | 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
 | 10 | Gold Data Products | 6 | 0 | 6 | 0 | 0 | 0 |
 | 11 | Consumption | 3 | 0 | 0 | 0 | 0 | 3 |
-| 12 | Orchestration | 4 | 0 | 0 | 0 | 0 | 4 |
+| 12 | Orchestration | 4 | 0 | 3 | 0 | 0 | 1 |
 | 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 0 | 4 |
 | 14 | Governance, Security & Lineage | 4 | 0 | 4 | 0 | 0 | 0 |
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 3 | 0 | 0 | 0 | 0 | 3 |
-| 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 0 | 0 | 5 |
-| | **TOTAL** | **109** | **48** | **29** | **0** | **0** | **32** |
+| 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 2 | 0 | 0 | 3 |
+| | **TOTAL** | **109** | **48** | **36** | **0** | **0** | **25** |
 
 **Verified complete: 48/109 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
@@ -162,7 +162,7 @@ _Package all four sources into one repeatable initial + incremental demo._
 | SRC-03 | One-command D0 load | Initial load for SQL, files, events, FX | ✅ DONE | P0 | SRC-02 | demo.py d0 executed for all four sources |
 | SRC-04 | One-command D1/D2 | Apply incremental changes across sources | ✅ DONE | P0 | SRC-03 | demo.py d1, d2, fix-d2, stale-fx executed |
 | SRC-05 | Cross-source consistency check | IDs join across SQL, files, events, FX currencies | ✅ DONE | P0 | SRC-03 | docs/dissertation_evidence/cross_source_verification.md: 8/8 checks pass |
-| SRC-06 | Source evidence capture | Screenshots/queries for the dissertation (sources chapter) | 📋 TODO | P1 | SRC-04 | Remaining: screenshots/queries for dissertation chapter; validation reports already in docs/dissertation_evidence/ |
+| SRC-06 | Source evidence capture | Screenshots/queries for the dissertation (sources chapter) | 📋 TODO | P1 | SRC-04 | Index of existing evidence in docs/dissertation_evidence/README.md; screenshots/queries still to capture after the first Databricks run |
 
 ---
 
@@ -173,7 +173,7 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
 | FWK-01 | YAML schemas | Contracts for source, ingestion, mapping, DQ rules, reference data, Gold product, consumption | 📋 TODO | P0 | FND-05, FND-06 | definitions/ examples validate against schema |
-| FWK-02 | Config loader + validator | Load/validate YAML, environment overlays, clear errors | 📋 TODO | P0 | FWK-01 | Unit tests |
+| FWK-02 | Config loader + validator | Load/validate YAML, environment overlays, clear errors | 🔄 BUILT, NOT VALIDATED | P0 | FWK-01 | edap_framework/core/config.py (strict-bool YAML loader) + core/validator.py + runners/validate_definitions.py: 0 errors across 63 YAML files; 15 offline unit tests pass incl. 7 negative cases; environment overlays still to do |
 | FWK-03 | Run context | run_id/batch_id, logging, environment | 📋 TODO | P0 | FWK-02 | Unit tests |
 | FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
 | FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | deployment/unity_catalog_setup.sql (catalog + 10 schemas); not run |
@@ -194,7 +194,7 @@ _Generic ingestion engine driven by YAML for all four sources._
 | BRZ-05 | Bronze writer + audit columns | Standard _source/_ingestion/_batch/_run/_hash columns | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | bronze/loader.py adds _source_system/_source_object/_source_file/_landing_batch_id/_batch_id/_run_id/_row_hash/_spec_path/_spec_version/_ingest_ts/_ingest_date + UC comment and tags from spec; not run |
 | BRZ-06 | Schema validation | Expected vs actual schema, drift handling | 📋 TODO | P1 | BRZ-05 | Drift test case |
 | BRZ-07 | Idempotency | Re-run does not duplicate | 📋 TODO | P0 | BRZ-05 | Re-run count unchanged |
-| BRZ-08 | Onboard a source by YAML only | Add a new table with no code changes | 📋 TODO | P0 | BRZ-01 | Demo of onboarding |
+| BRZ-08 | Onboard a source by YAML only | Add a new table with no code changes | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | runners/scaffold_sql_table.py: generates landing+bronze+starter DQ specs from the source contract; reproduces the 5 existing specs exactly (unit test); docs/runbooks/onboard_new_source_table.md; live onboarding demo still to do |
 
 ---
 
@@ -261,9 +261,9 @@ _Scheduled, event-driven and streaming workflows._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| ORC-01 | Scheduled job | SQL incremental + FX daily | 📋 TODO | P0 | BRZ-01 | Run history |
-| ORC-02 | File-arrival trigger | Position file arrival starts the pipeline | 📋 TODO | P0 | BRZ-02 | Trigger demo |
-| ORC-03 | Streaming job | Continuous event ingestion | 📋 TODO | P1 | BRZ-03 | Running stream |
+| ORC-01 | Scheduled job | SQL incremental + FX daily | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | deployment/jobs.yml: edap-daily-batch-sources (cron) and edap-silver-gold-build (cron) drafted, included from databricks.yml; not deployed |
+| ORC-02 | File-arrival trigger | Position file arrival starts the pipeline | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-02 | deployment/jobs.yml: edap-positions-on-file-arrival (file_arrival trigger on landing/positions/inbound) drafted; not deployed |
+| ORC-03 | Streaming job | Continuous event ingestion | 🔄 BUILT, NOT VALIDATED | P1 | BRZ-03 | deployment/jobs.yml: edap-trade-events-drain (every 15 min, availableNow drain) drafted; not deployed |
 | ORC-04 | End-to-end workflow | Landing -> Gold with dependencies | 📋 TODO | P0 | GLD-02 | Successful full run |
 
 ---
@@ -329,5 +329,5 @@ _Turn the build into evidence and a rehearsed demo._
 | DOC-01 | Fill TBD tables (Ch. 13-14, App. D/E/G/H) | Replace placeholders with measured results only | 📋 TODO | P0 | REC-01..03 | No TBD left |
 | DOC-02 | Screenshots | Per the evidence list in the spec | 📋 TODO | P0 | Phases 1-15 | docs/dissertation_evidence |
 | DOC-03 | Report fixes | Employer name, supervisor spelling, dates, missing Appendix F, figures/captions | 📋 TODO | P0 | - | Checklist re-verified |
-| DOC-04 | 20-minute demo script | D0 -> D1 -> bad file -> quarantine -> reprocess -> Gold -> dashboard | 📋 TODO | P0 | SRC-04, CON-01 | Dry run timed |
-| DOC-05 | Viva Q&A prep | Defend design choices (YAML, DQX, canonical model) | 📋 TODO | P1 | DOC-04 | Notes |
+| DOC-04 | 20-minute demo script | D0 -> D1 -> bad file -> quarantine -> reprocess -> Gold -> dashboard | 🔄 BUILT, NOT VALIDATED | P0 | SRC-04, CON-01 | docs/viva/demo_script.md: timed 20-minute draft; dry run needs the validated pipeline and dashboard |
+| DOC-05 | Viva Q&A prep | Defend design choices (YAML, DQX, canonical model) | 🔄 BUILT, NOT VALIDATED | P1 | DOC-04 | docs/viva/viva_qa.md: 12 questions drafted |

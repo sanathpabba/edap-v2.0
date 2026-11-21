@@ -21,7 +21,7 @@ Requires `az login`. First-time setup: `python3 -m venv .venv && .venv/bin/pip i
 Three consecutive recent business days (past, so real FX rates exist): **D0 = Mon 2026-11-16, D1 = Tue 2026-11-17, D2 = Wed 2026-11-18**.
 Source `last_updated_ts` values for D1/D2 changes are the real wall-clock time of the run (that is what a watermark sees).
 
-## What each scenario does (verified counts from the last run)
+## What each scenario does (verified counts; re-verified against the manifests after the 2026-11-21 rebuild)
 | | Azure SQL | Position file | Event Hubs | FX REST |
 |---|---|---|---|---|
 | **D0 initial** | reference 200 rows (100 instruments, 20 portfolios, 30 accounts, 50 counterparties) + 5,000 trades (as of D0) | `positions_20261116.csv` 1,296 rows | 10,163 outbox events published (+ duplicates, out-of-order, malformed = 10,276 messages); 102 events held back (outbox total 10,265) | history 2024-11-18..2026-11-16 (509 days, 8 currencies vs USD) |
@@ -31,6 +31,10 @@ Source `last_updated_ts` values for D1/D2 changes are the real wall-clock time o
 | **stale-fx** | - | - | - | `fx_rates_20261121_stale.json` (requested Sat, API returned Fri => stale) |
 
 D2 bad-file defects (manifest-verified): 10 missing portfolio, 6 duplicate position_id, 8 invalid quantity, 7 invalid currency, 5 unknown instrument, 5 invalid date.
+
+Note on the SQL watermark: D1 added 120 new trades and updated 12, but only 65 rows still carry a D1 timestamp after D2
+(D2 touched some of the same trades), so a delta read bounded to the D1 window finds 65; a delta read from the D1 watermark onward finds D1 + D2 changes.
+Cross-source verification after the rebuild: 8/8 (`docs/dissertation_evidence/cross_source_verification.md`).
 
 ## Where things land
 - SQL: `edap-source-db` (`source.*`, `reference.*`); `source.load_log` records each scenario's watermark.

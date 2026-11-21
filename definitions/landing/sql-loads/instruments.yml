@@ -24,7 +24,6 @@ extract:
     - sector
     - country
     - contract_size
-    - 6)
     - is_active
     - created_ts
     - last_updated_ts

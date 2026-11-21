@@ -1,0 +1,101 @@
+# Draft Databricks job definitions (Declarative Automation Bundle). NOT yet deployed or validated.
+# Every task passes the job run id so it is stamped on Bronze/Silver rows and the run log (lineage).
+# Pre-reqs: Unity Catalog setup (deployment/unity_catalog_setup.sql), external locations for landing/bronze, secret scope edap-kv.
+x-env: &env
+  environment_key: edap_env
+
+resources:
+  jobs:
+
+    # Schedule-based: relational + API sources, daily
+    edap_daily_batch_sources:
+      name: edap-daily-batch-sources
+      schedule: {quartz_cron_expression: "0 0 6 * * ?", timezone_id: UTC, pause_status: PAUSED}
+      environments:
+        - environment_key: edap_env
+          spec: {environment_version: "2", dependencies: [pyyaml, requests, databricks-labs-dqx]}
+      tasks:
+        - task_key: landing_sql
+          <<: *env
+          spark_python_task: {python_file: ../runners/landing_sql.py, parameters: ["--run-id", "{{job.run_id}}"]}
+        - task_key: bronze_sql
+          <<: *env
+          depends_on: [{task_key: landing_sql}]
+          spark_python_task: {python_file: ../runners/bronze_load.py, parameters: ["--source", "sql-loads", "--run-id", "{{job.run_id}}"]}
+        - task_key: dq_bronze_sql
+          <<: *env
+          depends_on: [{task_key: bronze_sql}]
+          spark_python_task: {python_file: ../runners/dq_bronze.py, parameters: ["--source", "sql-loads", "--run-id", "{{job.run_id}}"]}
+        - task_key: landing_fx
+          <<: *env
+          spark_python_task: {python_file: ../runners/landing_api.py, parameters: ["--mode", "daily", "--date", "{{job.trigger.time.iso_date}}", "--run-id", "{{job.run_id}}"]}
+        - task_key: bronze_fx
+          <<: *env
+          depends_on: [{task_key: landing_fx}]
+          spark_python_task: {python_file: ../runners/bronze_load.py, parameters: ["--source", "api-loads", "--run-id", "{{job.run_id}}"]}
+        - task_key: dq_bronze_fx
+          <<: *env
+          depends_on: [{task_key: bronze_fx}]
+          spark_python_task: {python_file: ../runners/dq_bronze.py, parameters: ["--source", "api-loads", "--run-id", "{{job.run_id}}"]}
+
+    # Event-driven: a position file arriving in landing starts the file pipeline
+    edap_positions_on_file_arrival:
+      name: edap-positions-on-file-arrival
+      trigger:
+        pause_status: PAUSED
+        file_arrival: {url: "abfss://landing@edapdl.dfs.core.windows.net/positions/inbound/"}
+      environments:
+        - environment_key: edap_env
+          spec: {environment_version: "2", dependencies: [pyyaml, requests, databricks-labs-dqx]}
+      tasks:
+        - task_key: landing_files
+          <<: *env
+          spark_python_task: {python_file: ../runners/landing_files.py, parameters: ["--run-id", "{{job.run_id}}"]}
+        - task_key: bronze_files
+          <<: *env
+          depends_on: [{task_key: landing_files}]
+          spark_python_task: {python_file: ../runners/bronze_load.py, parameters: ["--source", "file-loads", "--run-id", "{{job.run_id}}"]}
+        - task_key: dq_bronze_files
+          <<: *env
+          depends_on: [{task_key: bronze_files}]
+          spark_python_task: {python_file: ../runners/dq_bronze.py, parameters: ["--source", "file-loads", "--run-id", "{{job.run_id}}"]}
+
+    # Near-real-time: drain Event Hubs every 15 minutes (availableNow), then Bronze and DQ
+    edap_trade_events_drain:
+      name: edap-trade-events-drain
+      schedule: {quartz_cron_expression: "0 0/15 * * * ?", timezone_id: UTC, pause_status: PAUSED}
+      environments:
+        - environment_key: edap_env
+          spec: {environment_version: "2", dependencies: [pyyaml, requests, databricks-labs-dqx]}
+      tasks:
+        - task_key: landing_events
+          <<: *env
+          spark_python_task: {python_file: ../runners/landing_stream.py, parameters: ["--run-id", "{{job.run_id}}"]}
+        - task_key: bronze_events
+          <<: *env
+          depends_on: [{task_key: landing_events}]
+          spark_python_task: {python_file: ../runners/bronze_load.py, parameters: ["--source", "stream-loads", "--run-id", "{{job.run_id}}"]}
+        - task_key: dq_bronze_events
+          <<: *env
+          depends_on: [{task_key: bronze_events}]
+          spark_python_task: {python_file: ../runners/dq_bronze.py, parameters: ["--source", "stream-loads", "--run-id", "{{job.run_id}}"]}
+
+    # Downstream build: Silver then Gold then governance reporting (run after the three ingestion jobs)
+    edap_core_build:
+      name: edap-silver-gold-build
+      schedule: {quartz_cron_expression: "0 30 6 * * ?", timezone_id: UTC, pause_status: PAUSED}
+      environments:
+        - environment_key: edap_env
+          spec: {environment_version: "2", dependencies: [pyyaml, requests, databricks-labs-dqx]}
+      tasks:
+        - task_key: silver
+          <<: *env
+          spark_python_task: {python_file: ../runners/silver_load.py, parameters: ["--run-id", "{{job.run_id}}"]}
+        - task_key: gold
+          <<: *env
+          depends_on: [{task_key: silver}]
+          spark_python_task: {python_file: ../runners/gold_build.py, parameters: ["--run-id", "{{job.run_id}}"]}
+        - task_key: lineage_report
+          <<: *env
+          depends_on: [{task_key: gold}]
+          spark_python_task: {python_file: ../runners/governance_apply.py, parameters: ["--step", "lineage", "--run-id", "{{job.run_id}}"]}
