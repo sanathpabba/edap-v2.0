@@ -24,7 +24,7 @@ columns:
 lookups: []
 dedup:
   partition_by: [rate_date, base_currency, quote_currency]
-  order_by: ["is_stale_pull ASC", "fetched_at_utc DESC", "_ingest_ts DESC"]
+  order_by: ["is_stale_pull ASC", "fetched_at_utc DESC", "_bronze_ingest_ts DESC"]
 merge:
   keys: [rate_date, base_currency, quote_currency]
   update_when: "s.is_stale_pull = false OR t.is_stale_pull = true"

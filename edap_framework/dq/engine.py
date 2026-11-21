@@ -47,7 +47,9 @@ def apply_rule_set(spark, df, rule_set, env, batch_id, table_name=None):
     table_name = table_name or rule_set["target_table"]
     dq_run = audit.new_batch_id()
     checked = _dqx().apply_checks_by_metadata(df, rule_set["checks"])          # adds _errors / _warnings
-    has_err, has_warn = F.size("_errors") > 0, F.size("_warnings") > 0
+    # DQX leaves _errors / _warnings NULL (not an empty array) on rows that pass every rule; size(NULL) is NULL under ANSI, so coalesce
+    has_err = F.coalesce(F.size("_errors"), F.lit(0)) > 0
+    has_warn = F.coalesce(F.size("_warnings"), F.lit(0)) > 0
     total = df.count()
     invalid = checked.where(has_err)
     n_bad = invalid.count()

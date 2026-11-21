@@ -14,6 +14,8 @@ max min over partition by order desc asc rows unbounded preceding current row la
 double decimal boolean interval day sequence explode distinct group join on left right cross inner expr uuid sha2 regexp_extract""".split())
 TYPE_RX = re.compile(r"^(string|int|bigint|long|double|float|boolean|date|timestamp|decimal\(\d+,\d+\))$")
 LAYERS = ["landing", "bronze", "silver", "gold"]
+# lineage columns the Silver engine adds from Bronze (silver/engine.py BRONZE_LINEAGE); the original Bronze names (_ingest_ts ...) do not exist after mapping
+SILVER_BRONZE_COLUMNS = {"_bronze_file", "_bronze_batch_id", "_landing_batch_id", "_bronze_row_hash", "_bronze_ingest_ts", "_source_system", "_source_object"}
 
 
 def _idents(expr):
@@ -208,6 +210,26 @@ def validate():
                     if not c.get("name"):
                         warns.append("%s: a %s check has no name" % (rf, c["check"]["function"]))
 
+    # ---- Spark SQL expressions must not contain backslashes: inside a SQL string literal they are escapes ('\\d' becomes 'd'); use [0-9] classes
+    for f in _yaml_files():
+        if any(("/%s/" % d) in f for d in ("bronze", "mappings", "gold_products")):
+            spec = config.load_yaml(f, dummy)
+            exprs = list((spec.get("extra_columns") or {}).values()) + list((spec.get("columns") or {}).values() if f.find("/mappings/") >= 0 else []) \
+                + [spec.get("source", {}).get("where", "")] + [str(v) for v in (spec.get("select", {}).get("dimensions", {}) or {}).values()] \
+                + [str(v) for v in (spec.get("select", {}).get("measures", {}) or {}).values()]
+            for e in exprs:
+                if isinstance(e, str) and "\\" in e:
+                    err("%s: expression contains a backslash (a Spark SQL escape, not a regex class): %s" % (f, e[:90]))
+
+    # ---- every DQ check everywhere must carry a valid criticality (DQX accepts only error or warn)
+    for f in _yaml_files():
+        if "/dq_rules/" in f:
+            for c in config.load_yaml(f, dummy).get("checks", []):
+                if c.get("criticality", "error") not in ("error", "warn"):
+                    err("%s: check %s has criticality %r (only error or warn are valid)" % (f, c.get("name"), c.get("criticality")))
+                if not isinstance(c.get("name"), str) or not c.get("name"):
+                    err("%s: a %s check has no name (names are used in results and emails)" % (f, c["check"]["function"]))
+
     # ---- routing coverage: every allowed sec_type is routed somewhere
     allowed = None
     for c in config.load_yaml("definitions/dq_rules/bronze/sql_instruments.yml", dummy)["checks"]:
@@ -251,8 +273,9 @@ def validate():
                 if k not in cols:
                     err("%s: key %s not in columns" % (f, k))
             for o in m["dedup"]["order_by"] + m["dedup"]["partition_by"]:
-                if not _idents(o) <= (cols | {"_ingest_ts"}):
-                    err("%s: dedup refers to unknown column(s) %s" % (f, sorted(_idents(o) - cols - {"_ingest_ts"})))
+                known = cols | SILVER_BRONZE_COLUMNS
+                if not _idents(o) <= known:
+                    err("%s: dedup refers to unknown column(s) %s" % (f, sorted(_idents(o) - known)))
             silver_cols[fq] = cols
             rf = m.get("dq", {}).get("rules_file")
             if not rf or not exists(rf):

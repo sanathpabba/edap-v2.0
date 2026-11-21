@@ -33,7 +33,7 @@ lookups:
   - {table: edap.reference.country_region, active_only: true, on: {country_code: code}, add: {region: region}}
 dedup:
   partition_by: [instrument_id]
-  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+  order_by: ["source_updated_ts DESC", "_bronze_ingest_ts DESC"]
 merge:
   keys: [instrument_id]
   update_when: "s.source_updated_ts >= t.source_updated_ts"

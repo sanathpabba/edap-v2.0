@@ -25,4 +25,9 @@ def write_event_stream(spark, spec, env, df, batch_id, adhoc=False):
          .option("checkpointLocation", config.storage_uri(env, cp["container"], cp_path)).trigger(availableNow=True)
          .start(config.storage_uri(env, tgt["container"], tgt["path"])))
     q.awaitTermination()
-    return sum((q.lastProgress or {}).get("numInputRows", 0) for _ in [0])
+    return rows_read(q.recentProgress or [q.lastProgress or {}])
+
+
+def rows_read(progress):
+    """Total input rows over the micro-batches of the run. Progress entries can lack the count or carry None (e.g. nothing new in the hub)."""
+    return sum(int((p or {}).get("numInputRows") or 0) for p in progress)

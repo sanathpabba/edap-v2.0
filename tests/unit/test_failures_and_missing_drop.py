@@ -119,3 +119,9 @@ def test_halt_and_crash_in_the_same_layer_are_both_reported(monkeypatch):
     with pytest.raises(common.PipelineFailure) as e:
         sequence.run_sequence(ctx, out=lambda *_: None)
     assert "api down" in str(e.value) and "also halted" in str(e.value) and "sql_trades" in str(e.value)
+
+
+def test_event_row_count_tolerates_missing_and_none_progress():
+    from edap_framework.ingestion.streaming.eventhub_to_landing import rows_read
+    assert rows_read([{"numInputRows": None}, {"numInputRows": 5}, {}, None, {"numInputRows": 7}]) == 12
+    assert rows_read([]) == 0 and rows_read([{}]) == 0          # the failure on the first real run: nothing new in the hub

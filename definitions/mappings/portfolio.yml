@@ -25,7 +25,7 @@ columns:
 lookups: []
 dedup:
   partition_by: [portfolio_id]
-  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+  order_by: ["source_updated_ts DESC", "_bronze_ingest_ts DESC"]
 merge:
   keys: [portfolio_id]
   update_when: "s.source_updated_ts >= t.source_updated_ts"

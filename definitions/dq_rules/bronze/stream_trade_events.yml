@@ -7,8 +7,8 @@ target_table: edap.bronze.${ac}_stream_trade_events
 mode: quarantine
 description: Technical checks on raw events; not-JSON, missing trade_id, bad timestamp, negative quantity and unknown event type are caught here
 checks:
-- name: event_id_not_null
-  criticality: unparseable_or_missing_event_id
+- name: unparseable_or_missing_event_id
+  criticality: error
   check:
     function: is_not_null
     arguments:
@@ -20,8 +20,8 @@ checks:
     arguments:
       column: event_id
       regex: ^EVT\d{8}$
-- name: trade_id_not_null
-  criticality: missing_trade_id
+- name: missing_trade_id
+  criticality: error
   check:
     function: is_not_null
     arguments:

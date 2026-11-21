@@ -188,3 +188,38 @@ def test_validator_catches_unknown_source_drop_container(broken_tree):
     p = broken_tree / "definitions/environments/dev.yml"
     p.write_text(p.read_text().replace("sourcedrop: sourcedrop, ", ""))
     assert any("source_drop container" in e for e in validate()[0])
+
+
+def test_validator_catches_a_rule_name_used_as_criticality(broken_tree):
+    """The first-run bug: nn(col, name) put the rule name into the criticality slot."""
+    p = broken_tree / "definitions/dq_rules/bronze/file_positions.yml"
+    p.write_text(p.read_text().replace("  criticality: error\n  check:\n    function: is_not_null\n    arguments:\n      column: portfolio_ref", "  criticality: missing_portfolio\n  check:\n    function: is_not_null\n    arguments:\n      column: portfolio_ref", 1))
+    assert any("criticality" in e and "missing_portfolio" in e for e in validate()[0])
+
+
+def test_validator_catches_dedup_on_a_column_that_no_longer_exists(broken_tree):
+    """The first-run bug: dedup ordered by _ingest_ts, which Silver renames to _bronze_ingest_ts."""
+    p = broken_tree / "definitions/mappings/trade.yml"
+    p.write_text(p.read_text().replace("_bronze_ingest_ts DESC", "_ingest_ts DESC"))
+    assert any("dedup refers to unknown column" in e and "_ingest_ts" in e for e in validate()[0])
+
+
+def test_validator_catches_untemplated_rule_target(broken_tree):
+    """Regenerating rule files once dropped the ${ac} templating."""
+    p = broken_tree / "definitions/dq_rules/silver/trade.yml"
+    p.write_text(p.read_text().replace("edap.silver.${ac}_trade", "edap.silver.trade"))
+    assert any("target_table" in e for e in validate()[0])
+
+
+def test_validator_catches_backslash_in_a_spark_sql_expression(broken_tree):
+    """The first-run bug: '\\d' inside a SQL string literal is an escape, so the regex never matched and file_business_date was empty."""
+    p = broken_tree / "definitions/bronze/file-loads/positions.yml"
+    p.write_text(p.read_text().replace("'positions_([0-9]{8})'", "'positions_(\\d{8})'"))
+    assert any("backslash" in e for e in validate()[0])
+
+
+def test_dq_engine_treats_null_error_arrays_as_no_errors():
+    """The first-run bug: DQX leaves _errors NULL on clean rows; size(NULL) > 0 is NULL and NOT NULL is NULL, so clean rows vanished from the valid set."""
+    src = open(os.path.join(config.project_root(), "edap_framework", "dq", "engine.py")).read()
+    assert 'F.coalesce(F.size("_errors"), F.lit(0)) > 0' in src and 'F.coalesce(F.size("_warnings"), F.lit(0)) > 0' in src
+    assert 'F.size("_errors") > 0' not in src.replace('F.coalesce(F.size("_errors"), F.lit(0)) > 0', "")

@@ -32,7 +32,7 @@ lookups:
   - {table: edap.silver.${ac}_trade, on: {trade_id: trade_id}, flag: _ref_trade_ok}
 dedup:
   partition_by: [event_id]
-  order_by: ["_ingest_ts DESC"]
+  order_by: ["_bronze_ingest_ts DESC"]
 merge:
   keys: [event_id]
   update_when: ""                     # events are immutable: first copy wins, later duplicates are ignored

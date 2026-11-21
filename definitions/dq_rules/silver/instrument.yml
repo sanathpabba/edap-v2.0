@@ -27,8 +27,8 @@ checks:
     arguments:
       columns:
       - instrument_id
-- name: asset_class_not_null
-  criticality: asset_class_unmapped
+- name: asset_class_unmapped
+  criticality: error
   check:
     function: is_not_null
     arguments:

@@ -27,8 +27,8 @@ checks:
     arguments:
       columns:
       - position_id
-- name: portfolio_ref_not_null
-  criticality: missing_portfolio
+- name: missing_portfolio
+  criticality: error
   check:
     function: is_not_null
     arguments:

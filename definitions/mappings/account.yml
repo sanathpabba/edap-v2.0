@@ -27,7 +27,7 @@ lookups:
   - {table: edap.silver.common_portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
 dedup:
   partition_by: [account_id]
-  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+  order_by: ["source_updated_ts DESC", "_bronze_ingest_ts DESC"]
 merge:
   keys: [account_id]
   update_when: "s.source_updated_ts >= t.source_updated_ts"

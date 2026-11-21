@@ -45,7 +45,7 @@ lookups:
   - {table: edap.silver.common_account, on: {account_id: account_id, portfolio_id: portfolio_id}, flag: _ref_account_portfolio_ok}
 dedup:
   partition_by: [trade_id]
-  order_by: ["source_updated_ts DESC", "trade_version DESC", "_ingest_ts DESC"]
+  order_by: ["source_updated_ts DESC", "trade_version DESC", "_bronze_ingest_ts DESC"]
 merge:
   keys: [trade_id]
   update_when: "s.source_updated_ts >= t.source_updated_ts"      # a late, older version never overwrites a newer one
