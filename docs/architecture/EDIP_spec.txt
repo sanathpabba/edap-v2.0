@@ -1,0 +1,1567 @@
+EDIP — ENTERPRISE DATA INTELLIGENCE PLATFORM
+Claude Implementation Context / Project Handoff
+Version: Planning Baseline
+Project: BITS Pilani MBA Business Analytics Dissertation
+Domain: Capital Markets Enterprise Data Platform Modernization
+
+======================================================================
+1. PURPOSE OF THIS FILE
+======================================================================
+
+This file is the implementation context for Claude/Claude Code.
+
+Treat this document as the baseline architectural and engineering specification for the EDIP project. The goal is to build a demonstrable end-to-end Enterprise Data Intelligence Platform that modernizes a legacy report-centric Capital Markets data environment into a governed, metadata-driven Lakehouse.
+
+The project must demonstrate:
+
+- Multiple heterogeneous source-system patterns.
+- Orchestrated ingestion into a Landing area.
+- Medallion-style processing using Landing, Bronze, Silver, Gold, and Platinum layers.
+- Canonical Data Modeling in Silver.
+- Reusable business data products in Gold.
+- Consumer-specific serving and delivery in Platinum.
+- Unity Catalog governance.
+- Metadata-driven processing.
+- Data catalog and lineage.
+- DQX-based data quality controls at Bronze and Silver.
+- Monitoring, observability, alerting, and remediation.
+- Identity and access controls.
+- Audit logging.
+- Reference-data management.
+- Scheduled, event-driven, and streaming pipelines.
+- Cost/usage monitoring.
+- Deployment and source-control practices.
+- Multiple consumption mechanisms including Databricks dashboards, Power BI, cloud database publishing, and file/email delivery.
+
+This is an academic prototype, not a production bank implementation. All data, schemas, source systems, mappings, and business examples must remain synthetic, generalized, and non-confidential.
+
+Do not fabricate implementation results, performance improvements, cost savings, accuracy percentages, or business metrics. Only report measurements that are actually produced by the prototype.
+
+======================================================================
+2. PROJECT NAME
+======================================================================
+
+Short Name:
+EDIP
+
+Expansion:
+Enterprise Data Intelligence Platform
+
+Repository / working-folder name:
+EDIP
+
+Academic dissertation theme:
+Enterprise Data Platform Modernization using Canonical Data Modeling and Medallion Lakehouse Architecture: A Framework for Legacy Capital Markets Reporting Transformation
+
+Core modernization principle:
+Do not recreate the legacy environment through one-to-one report migration.
+
+Target philosophy:
+Build reusable, governed enterprise data assets that can support multiple reporting and analytical consumers.
+
+======================================================================
+3. HIGH-LEVEL ARCHITECTURE
+======================================================================
+
+DATA PLANE
+
+Source Systems
+    |
+    v
+Orchestration / Ingestion
+    |
+    v
+Landing
+    |
+    v
+Bronze
+    |
+    v
+Silver Canonical
+    |
+    v
+Gold Business Data Products
+    |
+    v
+Platinum Serving / Delivery
+    |
+    v
+Consumer Channels
+
+
+CONTROL / GOVERNANCE PLANE
+
+The following capabilities cut across the entire data plane:
+
+- Unity Catalog
+- Metadata repository
+- Data catalog
+- Data lineage
+- Data Quality / DQX
+- Reference-data management
+- Identity and access management
+- Policy enforcement
+- Audit logging
+- Monitoring
+- Observability
+- Alerting
+- Remediation
+- Cost management
+- Deployment / CI-CD
+- Operational controls
+
+Do not model these capabilities as another Medallion layer. They are cross-cutting platform controls.
+
+======================================================================
+4. SOURCE SYSTEM STRATEGY
+======================================================================
+
+The project must use four source patterns because each demonstrates a different enterprise ingestion challenge.
+
+SOURCE 1 — RELATIONAL DATABASE
+Technology:
+Azure SQL Database
+
+Purpose:
+Structured transactional / master-data source.
+
+Representative tables:
+
+1. trades
+2. instruments
+3. portfolios
+4. accounts
+5. counterparties
+
+Representative trade attributes:
+
+- trade_id
+- instrument_id
+- portfolio_id
+- counterparty_id
+- account_id
+- trade_date
+- trade_timestamp
+- trade_type
+- quantity
+- price
+- currency
+- status
+- last_updated_ts
+
+Representative portfolio attributes:
+
+- portfolio_id
+- portfolio_code
+- portfolio_name
+- business_unit
+- base_currency
+- status
+- last_updated_ts
+
+Representative account attributes:
+
+- account_id
+- account_code
+- account_type
+- currency
+- status
+- last_updated_ts
+
+Representative counterparty attributes:
+
+- counterparty_id
+- counterparty_code
+- counterparty_name
+- country
+- risk_category
+- status
+- last_updated_ts
+
+Representative instrument attributes:
+
+- instrument_id
+- instrument_code
+- instrument_name
+- instrument_type
+- currency
+- exchange
+- status
+- last_updated_ts
+
+Primary ingestion pattern:
+Scheduled incremental ingestion.
+
+Incremental logic:
+Use last_updated_ts or an equivalent watermark column.
+
+Demo requirement:
+Initial load followed by additional INSERT/UPDATE activity to demonstrate incremental ingestion.
+
+------------------------------------------------------------
+
+SOURCE 2 — FILE-BASED SOURCE
+Technology:
+Azure Blob Storage / ADLS Gen2 or equivalent cloud object storage.
+
+Purpose:
+Daily position extract.
+
+File pattern:
+
+positions_YYYYMMDD.csv
+
+Example:
+
+positions_20261119.csv
+
+Representative attributes:
+
+- position_id
+- portfolio_id
+- instrument_id
+- position_date
+- quantity
+- average_cost
+- market_value
+- currency
+- source_system
+
+Preferred inbound pattern:
+
+/source/positions/inbound/
+
+Primary ingestion pattern:
+File-arrival/event-based ingestion.
+
+Required demo scenarios:
+
+A. Good file
+B. Bad file containing deliberately introduced data-quality issues
+
+Examples of controlled bad data:
+
+- missing portfolio_id
+- duplicate position_id
+- invalid quantity
+- invalid currency
+- unknown instrument_id
+- invalid date
+
+The bad-file scenario should be used to demonstrate:
+
+File Arrival
+-> ingestion
+-> Bronze
+-> DQX
+-> quarantine
+-> alert
+-> remediation
+-> reprocessing
+
+------------------------------------------------------------
+
+SOURCE 3 — STREAMING SOURCE
+Technology:
+Azure Event Hubs with Kafka-compatible interface, or Kafka if practical.
+
+Purpose:
+Trade lifecycle / trade execution events.
+
+Representative event payload:
+
+{
+  "event_id": "EVT100023",
+  "trade_id": "TRD100045",
+  "instrument_id": "AAPL",
+  "portfolio_id": "PF001",
+  "counterparty_id": "CP012",
+  "trade_type": "BUY",
+  "quantity": 500,
+  "price": 275.45,
+  "currency": "USD",
+  "event_type": "TRADE_EXECUTED",
+  "event_timestamp": "2026-11-19T18:15:30Z"
+}
+
+Representative event types:
+
+- TRADE_EXECUTED
+- TRADE_AMENDED
+- TRADE_CANCELLED
+- TRADE_SETTLED
+
+Primary ingestion pattern:
+Continuous Structured Streaming.
+
+Required concepts:
+
+- event_id
+- event_timestamp
+- ingestion timestamp
+- checkpointing
+- duplicate event handling
+- out-of-order events
+- late-arriving events
+- malformed/invalid events
+- stream-to-Bronze persistence
+
+Conceptual relationship:
+Azure SQL trades represent current/system-of-record state.
+Event Hub/Kafka represents business lifecycle events.
+
+Optional validation:
+Compare stream-derived state/event history with current trade state in Azure SQL.
+
+------------------------------------------------------------
+
+SOURCE 4 — REST API
+Technology:
+Public REST API.
+
+Preferred business use:
+FX / market reference rates.
+
+Recommended API:
+A public FX API requiring no sensitive credentials where possible.
+
+Representative attributes:
+
+- rate_date
+- base_currency
+- quote_currency
+- exchange_rate
+- source
+
+Primary ingestion pattern:
+Scheduled REST API pull.
+
+Required concepts:
+
+- HTTP request handling
+- JSON parsing
+- retry logic
+- error handling
+- API status validation
+- ingestion timestamp
+- stale-data handling
+- optional pagination if available
+- API response persistence into Landing/Bronze
+
+Business use:
+FX rates should contribute to actual downstream calculations such as converting market value into a common reporting currency.
+
+======================================================================
+5. SOURCE DATA VOLUMES
+======================================================================
+
+Keep the prototype meaningful but manageable.
+
+Indicative scale:
+
+- Instruments: ~100
+- Portfolios: ~20
+- Accounts: ~30
+- Counterparties: ~50
+- Trades: ~5,000
+- Positions: ~2,000
+- Trade events: 10,000+ generated over time if convenient
+- FX rates: small daily dataset
+
+These are planning ranges only.
+
+Do not represent these counts as production scale.
+
+======================================================================
+6. ORCHESTRATION AND INGESTION
+======================================================================
+
+Preferred primary orchestrator:
+Databricks Lakeflow Jobs / Databricks Workflows.
+
+Use different triggering mechanisms intentionally.
+
+Azure SQL:
+Scheduled incremental job.
+
+Position files:
+File-arrival trigger.
+
+REST API:
+Scheduled job.
+
+Event Hub / Kafka:
+Continuous streaming.
+
+All source types must converge into a common platform pattern and common audit framework.
+
+The ingestion framework should capture:
+
+- source system
+- source object
+- ingestion method
+- target landing location
+- target Bronze object
+- load type
+- watermark
+- schedule/trigger type
+- expected schema
+- DQ rule set
+- owner
+- active/inactive status
+- run/batch identifiers
+
+Avoid hard-coding all source-specific processing behavior where metadata/configuration can reasonably control it.
+
+======================================================================
+7. LANDING LAYER
+======================================================================
+
+Purpose:
+Temporary receipt/staging zone for source data before formal table ingestion.
+
+Landing is not the main business data model.
+
+Preferred storage:
+Unity Catalog external volume or governed cloud location.
+
+Landing should preserve native or near-native source representations.
+
+Examples:
+
+- database extracts
+- CSV files
+- API JSON responses
+- streaming micro-batch/event payload files if needed
+
+Typical Landing metadata:
+
+- source_system
+- source_object
+- received_timestamp
+- source_filename/object
+- batch_id
+- run_id
+- checksum if useful
+- arrival status
+- schema/version reference
+
+Retention:
+Potentially shorter than Bronze.
+
+======================================================================
+8. BRONZE LAYER
+======================================================================
+
+Purpose:
+Immutable or minimally transformed, source-aligned data stored as Delta tables.
+
+Preferred storage/governance:
+Unity Catalog managed Delta tables wherever available.
+
+Bronze must preserve replayability and source traceability.
+
+Standard Bronze technical metadata should be added consistently.
+
+Recommended metadata columns:
+
+- _source_system
+- _source_object
+- _source_file_name
+- _ingestion_timestamp
+- _batch_id
+- _run_id
+- _record_source
+- _schema_version
+- _load_type
+- _ingestion_status
+- _record_hash
+
+Not every field must be populated for every source, but naming conventions should be standardized.
+
+Bronze should avoid heavy business transformations.
+
+======================================================================
+9. DQX AT BRONZE
+======================================================================
+
+Use the Databricks Labs DQX framework for Bronze technical/data-ingestion quality checks.
+
+Bronze DQ question:
+"Did we receive technically valid data?"
+
+Representative Bronze checks:
+
+- required source fields exist
+- mandatory identifiers are non-null
+- schema is readable
+- expected data types can be interpreted
+- timestamps parse correctly
+- numeric fields are parseable
+- duplicate source/event identifier detection
+- malformed record handling
+- unexpected schema change
+- file/source freshness where relevant
+
+Bronze should preserve source data wherever possible.
+
+Preferred DQ outcomes:
+
+- valid Bronze records
+- marked invalid records where appropriate
+- quarantine table/location for failed records
+- DQ metrics
+- DQ rule execution results
+- alertable DQ summary
+
+Avoid unnecessarily discarding source records.
+
+======================================================================
+10. SILVER LAYER — CANONICAL DATA MODEL
+======================================================================
+
+Silver is the core enterprise-standardization layer and the heart of the dissertation.
+
+Purpose:
+
+- cleaning
+- standardization
+- integration
+- deduplication
+- business-key resolution
+- reference-data validation
+- canonical entity creation
+- source abstraction
+
+Primary canonical entities:
+
+1. Trade
+2. Instrument
+3. Portfolio
+4. Position
+5. Counterparty
+6. Account
+7. Market Data / FX
+
+Silver transformations may include:
+
+- data type normalization
+- date/time standardization
+- code normalization
+- status standardization
+- deduplication
+- surrogate/business key resolution
+- source-to-canonical mapping
+- reference-data lookup
+- relationship enforcement
+- controlled business derivations
+
+Canonical Data Model principle:
+
+Multiple source-specific representations
+-> standardized enterprise representation
+-> multiple reusable consumers
+
+======================================================================
+11. DQX AT SILVER
+======================================================================
+
+Silver DQ question:
+"Is the data valid according to enterprise/business rules?"
+
+Representative Silver checks:
+
+- trade_id uniqueness
+- instrument_id resolves to Instrument
+- portfolio_id resolves to Portfolio
+- counterparty_id resolves where required
+- account_id resolves where required
+- approved currency values
+- valid business statuses
+- business-date rules
+- valid quantity/price rules
+- position-to-instrument relationship
+- required reference mappings
+- duplicate canonical business keys
+- business-level consistency checks
+
+Silver DQ outputs:
+
+- accepted canonical records
+- quarantined business-invalid records
+- rule-level metrics
+- record-level failure reasons
+- remediation status
+- rerun/reprocess evidence
+
+Recommended governance objects:
+
+metadata.dq_rules
+metadata.dq_rule_sets
+
+monitoring.dq_results
+monitoring.dq_summary
+
+quarantine.bronze_invalid
+quarantine.silver_invalid
+
+DQX rules should be declarative/configurable where practical.
+
+======================================================================
+12. GOLD LAYER
+======================================================================
+
+Gold contains reusable, business-ready data products.
+
+Do not build one Gold table per legacy report.
+
+Gold should embody the dissertation principle of reuse.
+
+Recommended Gold data products:
+
+1. Trade Analytics
+2. Position & Exposure
+3. P&L / Finance
+4. Regulatory / Management Reporting
+
+Potential object names:
+
+gold.trade_analytics
+gold.position_exposure
+gold.pnl_finance
+gold.regulatory_reporting
+
+Each Gold product should document:
+
+- business purpose
+- grain
+- source canonical entities
+- major measures
+- major dimensions
+- owner
+- DQ expectations
+- refresh pattern
+- intended consumers
+
+======================================================================
+13. PLATINUM LAYER
+======================================================================
+
+Platinum is the consumer-specific serving/delivery layer above Gold.
+
+Gold:
+Reusable business data product.
+
+Platinum:
+Consumer-optimized representation.
+
+Do not place core enterprise business rules in Platinum if they belong in Silver or Gold.
+
+Potential objects:
+
+platinum.powerbi_position_dashboard
+platinum.databricks_trade_dashboard
+platinum.daily_position_extract
+platinum.finance_delivery
+
+Platinum use cases:
+
+- dashboard-ready tables/views
+- report extracts
+- outbound files
+- consumer-specific schemas
+- optimized serving structures
+- database-delivery datasets
+
+======================================================================
+14. CONSUMER / DELIVERY CHANNELS
+======================================================================
+
+Demonstrate multiple consumption mechanisms from shared governed products.
+
+Required/desired channels:
+
+1. Databricks AI/BI dashboard
+2. Power BI dashboard
+3. Publish selected Platinum output to a cloud relational database
+4. Generate controlled outbound CSV/Parquet/Excel-like file as appropriate
+5. Email/file delivery workflow where feasible
+
+Separate BUSINESS DELIVERY from OPERATIONAL ALERTING.
+
+Business delivery examples:
+
+Gold
+-> Platinum
+-> Power BI / Databricks Dashboard / Cloud DB / File Delivery
+
+Operational alerting examples:
+
+Pipeline / DQ / monitoring
+-> Alert
+-> Email or supported notification destination
+
+======================================================================
+15. UNITY CATALOG
+======================================================================
+
+Unity Catalog is the governance anchor.
+
+Preferred catalog:
+edip
+
+Recommended schemas:
+
+- landing
+- bronze
+- silver
+- gold
+- platinum
+- metadata
+- reference
+- quarantine
+- monitoring
+- audit
+
+Use Catalog Explorer for demonstration.
+
+Use Unity Catalog for:
+
+- catalog/schema/table organization
+- managed tables
+- external volumes where appropriate
+- descriptions
+- ownership
+- permissions
+- tags/classifications
+- lineage
+- access control
+- discoverability
+
+Preferred storage approach:
+
+Landing:
+External UC volume / governed cloud landing location.
+
+Bronze/Silver/Gold/Platinum:
+Unity Catalog managed Delta tables wherever practical.
+
+======================================================================
+16. METADATA-DRIVEN CONTROL MODEL
+======================================================================
+
+Create metadata/configuration rather than hard-coding all pipelines.
+
+At minimum capture:
+
+- source_system
+- source_object
+- source_type
+- ingestion_method
+- source_format
+- target_landing_path
+- target_bronze_table
+- target_layer
+- load_type
+- business_key
+- watermark_column
+- watermark_value
+- schedule_or_trigger
+- schema_definition
+- dq_rule_set
+- owner
+- sensitivity_classification
+- active_flag
+- created_timestamp
+- updated_timestamp
+
+Potential metadata domains:
+
+- ingestion metadata
+- transformation metadata
+- DQ metadata
+- pipeline metadata
+- business metadata
+
+======================================================================
+17. DATA CATALOG
+======================================================================
+
+The catalog should demonstrate that key data assets are discoverable and understandable.
+
+Capture for important objects:
+
+- technical name
+- business name
+- description
+- owner
+- steward where appropriate
+- source
+- business definition
+- sensitivity classification
+- DQ status
+- lineage context
+- intended consumers
+
+======================================================================
+18. REFERENCE DATA MANAGEMENT
+======================================================================
+
+Implement at least one real reference-data use case.
+
+Potential reference domains:
+
+- currency
+- instrument classification
+- portfolio hierarchy
+- counterparty risk classification
+- trade status
+- country/region
+- business-unit mapping
+
+Reference data should be governed.
+
+Where practical include:
+
+- code
+- description
+- effective_from
+- effective_to
+- active_flag
+- version
+- owner/source
+
+Silver canonical transformations should consume approved reference data.
+
+======================================================================
+19. DATA LINEAGE
+======================================================================
+
+Target lineage story:
+
+Source
+-> Landing
+-> Bronze
+-> Silver Canonical Entity
+-> Gold Data Product
+-> Platinum Serving Object
+-> Dashboard / delivery
+
+Use Unity Catalog lineage where available.
+
+The final demo should show at least one end-to-end lineage path.
+
+======================================================================
+20. MONITORING AND OBSERVABILITY
+======================================================================
+
+Observability must cover both pipeline health and data health.
+
+Capture:
+
+- pipeline run status
+- start/end timestamps
+- duration
+- task status
+- retry count
+- failure reason
+- source row/event count
+- target row count
+- reconciliation result
+- DQ pass/fail counts
+- quarantine count
+- data freshness
+- schema drift/change
+- consumer-delivery status
+- cost/usage indicators where available
+
+Use Databricks System Tables where supported.
+
+Potential operations dashboard:
+
+- pipeline success/failure
+- last successful run
+- records processed
+- DQ failures
+- rejected/quarantined records
+- runtime duration
+- data freshness
+- cost/usage
+
+======================================================================
+21. ALERTING
+======================================================================
+
+Implement a small number of meaningful alerts.
+
+Examples:
+
+- pipeline failure
+- file/source not received
+- quality threshold breached
+- excessive quarantine count
+- stale API data
+- failed outbound delivery
+- streaming failure
+
+Alert payload should include enough context to investigate:
+
+- pipeline/job
+- run ID
+- source
+- failure type
+- timestamp
+- link/reference where available
+
+======================================================================
+22. REMEDIATION
+======================================================================
+
+Implement a simple, demonstrable remediation lifecycle.
+
+Pattern:
+
+Detect
+-> Classify
+-> Quarantine / Reject / Continue with Warning
+-> Alert
+-> Assign/Record Owner
+-> Correct
+-> Reprocess
+-> Validate
+-> Close
+
+At least one deliberately invalid record/file should pass through this lifecycle in the demo.
+
+======================================================================
+23. IDENTITY AND ACCESS
+======================================================================
+
+Representative personas:
+
+- Platform Administrator
+- Data Engineer
+- Data Steward
+- Analyst / BI Consumer
+- Read-Only Auditor
+
+Access principles:
+
+- least privilege
+- restrict Landing/Bronze to engineering/platform roles
+- expose approved Gold/Platinum products to business consumers
+- protect sensitive fields
+- separate administrative from analytical privileges
+
+Use Unity Catalog privileges/groups where available.
+
+Optional:
+Demonstrate one denied or restricted-access scenario.
+
+======================================================================
+24. POLICY ENFORCEMENT
+======================================================================
+
+Demonstrate a small but clear policy set.
+
+Examples:
+
+- consumer roles cannot directly query raw Landing data
+- restricted access to Bronze
+- approved Gold/Platinum only for BI consumers
+- masking/limited exposure for sensitive attributes where supported
+- ownership required for governed products
+- retention/processing rules documented
+
+Do not attempt to reproduce a full financial-institution policy framework.
+
+======================================================================
+25. AUDIT LOGGING
+======================================================================
+
+Capture/retain evidence for:
+
+- pipeline executions
+- data loads
+- DQ outcomes
+- remediation/reprocessing
+- object access where available
+- platform/configuration changes where available
+
+Potential use:
+Databricks System Tables / audit system information.
+
+======================================================================
+26. COST MANAGEMENT / FINOPS
+======================================================================
+
+Keep cost management proportional to an academic prototype.
+
+Demonstrate:
+
+- workload identification/tagging where possible
+- representative compute/job usage
+- cost/usage system tables where available
+- auto-termination / right-sizing choices
+- avoiding unnecessary recomputation
+- incremental vs full processing
+- scheduling efficiency
+
+Do not invent cost savings.
+
+Report actual observations only.
+
+======================================================================
+27. DEVELOPMENT AND DEPLOYMENT
+======================================================================
+
+Source control:
+GitHub.
+
+Databricks development:
+Notebooks, Python, SQL, and/or Lakeflow Declarative Pipelines as appropriate.
+
+Deployment:
+Prefer Databricks Declarative Automation Bundles where feasible.
+
+Keep:
+
+- code
+- SQL
+- configurations
+- metadata definitions
+- DQ rules
+- deployment definitions
+- tests
+- documentation
+
+under version control.
+
+Environment concept:
+
+- dev
+- test
+- prod
+
+For the academic prototype, physical separation may be simplified, but configuration patterns should support environment-specific values.
+
+Never store passwords/secrets in source code.
+
+Use Databricks secrets or secure environment/configuration mechanisms.
+
+======================================================================
+28. DATABRICKS FEATURES PLANNED FOR USE
+======================================================================
+
+Primary features:
+
+- Unity Catalog
+- Catalog Explorer
+- Unity Catalog Volumes
+- Delta Lake
+- Auto Loader
+- Structured Streaming
+- Lakeflow Jobs / Databricks Workflows
+- Lakeflow Declarative Pipelines where appropriate
+- Apache Spark / PySpark
+- Databricks SQL
+- DQX
+- Unity Catalog Lineage
+- System Tables
+- Databricks SQL Alerts / job notifications
+- AI/BI Dashboards
+- SQL Warehouse
+- Databricks Secrets
+- Git Folders
+- Declarative Automation Bundles
+- Photon where available
+
+Optional/stretch:
+
+- Delta Sharing
+- Genie
+- Mosaic AI
+- Databricks Apps
+- API serving
+
+Do not make optional capabilities part of the critical path.
+
+======================================================================
+29. REPOSITORY / FOLDER STRUCTURE
+======================================================================
+
+EDIP/
+|
++-- 01_source_systems/
+|   +-- azure_sql/
+|   |   +-- ddl/
+|   |   +-- seed_data/
+|   |   +-- incremental_data/
+|   |   +-- scripts/
+|   |
+|   +-- file_source/
+|   |   +-- sample_files/
+|   |   +-- good_files/
+|   |   +-- bad_files/
+|   |   +-- generators/
+|   |
+|   +-- streaming/
+|   |   +-- event_producer/
+|   |   +-- schemas/
+|   |   +-- sample_events/
+|   |
+|   +-- rest_api/
+|       +-- api_clients/
+|       +-- schemas/
+|       +-- sample_responses/
+|
++-- 02_ingestion/
+|   +-- azure_sql/
+|   +-- files/
+|   +-- streaming/
+|   +-- rest_api/
+|   +-- common/
+|   +-- checkpoints/
+|
++-- 03_landing/
+|   +-- configuration/
+|   +-- file_patterns/
+|   +-- documentation/
+|
++-- 04_bronze/
+|   +-- pipelines/
+|   +-- schemas/
+|   +-- transformations/
+|   +-- audit_columns/
+|   +-- dq/
+|
++-- 05_silver/
+|   +-- canonical_model/
+|   |   +-- trade/
+|   |   +-- instrument/
+|   |   +-- portfolio/
+|   |   +-- position/
+|   |   +-- counterparty/
+|   |   +-- account/
+|   |   +-- market_data/
+|   |
+|   +-- transformations/
+|   +-- mappings/
+|   +-- reference_data/
+|   +-- dq/
+|
++-- 06_gold/
+|   +-- trade_analytics/
+|   +-- position_exposure/
+|   +-- pnl_finance/
+|   +-- regulatory_reporting/
+|
++-- 07_platinum/
+|   +-- databricks_dashboards/
+|   +-- power_bi/
+|   +-- database_delivery/
+|   +-- file_delivery/
+|   +-- email_delivery/
+|
++-- 08_metadata/
+|   +-- ingestion_metadata/
+|   +-- transformation_metadata/
+|   +-- dq_metadata/
+|   +-- pipeline_metadata/
+|   +-- business_metadata/
+|   +-- schemas/
+|
++-- 09_data_quality/
+|   +-- dqx/
+|   |   +-- bronze_rules/
+|   |   +-- silver_rules/
+|   |   +-- rule_sets/
+|   |   +-- framework/
+|   |
+|   +-- quarantine/
+|   +-- remediation/
+|   +-- dq_metrics/
+|
++-- 10_governance/
+|   +-- unity_catalog/
+|   +-- data_catalog/
+|   +-- lineage/
+|   +-- classifications/
+|   +-- policies/
+|   +-- ownership/
+|
++-- 11_reference_data/
+|   +-- instruments/
+|   +-- currencies/
+|   +-- portfolios/
+|   +-- counterparties/
+|   +-- mappings/
+|
++-- 12_security/
+|   +-- identities/
+|   +-- roles/
+|   +-- grants/
+|   +-- masking/
+|   +-- secrets/
+|
++-- 13_orchestration/
+|   +-- scheduled/
+|   +-- event_based/
+|   +-- streaming/
+|   +-- workflows/
+|   +-- dependencies/
+|
++-- 14_monitoring/
+|   +-- pipeline_monitoring/
+|   +-- data_monitoring/
+|   +-- observability/
+|   +-- alerts/
+|   +-- sla_slo/
+|   +-- dashboards/
+|
++-- 15_audit/
+|   +-- pipeline_audit/
+|   +-- data_audit/
+|   +-- access_audit/
+|   +-- reconciliation/
+|
++-- 16_cost_management/
+|   +-- usage_queries/
+|   +-- cost_dashboards/
+|   +-- tagging/
+|   +-- optimization/
+|
++-- 17_deployment/
+|   +-- dev/
+|   +-- test/
+|   +-- prod/
+|   +-- databricks_bundles/
+|   +-- cicd/
+|   +-- environment_config/
+|
++-- 18_tests/
+|   +-- unit/
+|   +-- integration/
+|   +-- data_quality/
+|   +-- reconciliation/
+|   +-- end_to_end/
+|
++-- 19_notebooks/
+|   +-- exploratory/
+|   +-- utilities/
+|   +-- demo/
+|
++-- 20_config/
+|   +-- dev/
+|   +-- test/
+|   +-- prod/
+|   +-- common/
+|
++-- 21_docs/
+|   +-- architecture/
+|   +-- data_model/
+|   +-- mappings/
+|   +-- runbooks/
+|   +-- demo/
+|   +-- screenshots/
+|   +-- dissertation_evidence/
+|
++-- resources/
+|   +-- diagrams/
+|   +-- sample_data/
+|
++-- databricks.yml
++-- requirements.txt
++-- README.md
++-- .gitignore
+
+======================================================================
+30. RECOMMENDED BUILD ORDER
+======================================================================
+
+Do not build all components simultaneously.
+
+Build in this order:
+
+1. Create EDIP repository/folder structure.
+2. Confirm Azure/Databricks/GitHub environment.
+3. Create Azure SQL source schema and synthetic data.
+4. Create file-source generator and good/bad sample position files.
+5. Create streaming event producer.
+6. Configure REST FX source.
+7. Create Unity Catalog catalog/schemas/volumes.
+8. Define metadata control model.
+9. Implement Landing.
+10. Implement Bronze ingestion source by source.
+11. Add Bronze DQX checks.
+12. Build Silver canonical entities.
+13. Add reference-data processing.
+14. Add Silver DQX business checks.
+15. Build Gold reusable business products.
+16. Build Platinum serving outputs.
+17. Configure scheduled workflows.
+18. Configure file-arrival/event-based workflow.
+19. Configure streaming workflow.
+20. Implement monitoring/observability.
+21. Implement alerting.
+22. Implement quarantine/remediation/reprocessing.
+23. Configure access and governance.
+24. Capture lineage.
+25. Implement Databricks dashboard.
+26. Implement Power BI connection/dashboard.
+27. Publish one output to a cloud database.
+28. Implement file/email delivery if feasible.
+29. Add audit and cost-management evidence.
+30. Implement tests and reconciliation.
+31. Capture dissertation evidence/screenshots.
+32. Build final demo script.
+
+======================================================================
+31. MUST-HAVE FINAL DEMO
+======================================================================
+
+Minimum final demo should prove:
+
+- at least two source types, preferably all four
+- Landing -> Bronze -> Silver -> Gold -> Platinum
+- canonical entities
+- metadata-driven processing
+- Unity Catalog
+- DQX at Bronze
+- DQX at Silver
+- quarantine/remediation
+- one scheduled workflow
+- one event-triggered workflow
+- streaming if stable enough
+- monitoring/observability
+- alerting
+- lineage
+- access control
+- at least two consumer channels
+- reconciliation evidence
+
+The ideal demo uses all four source types, but completion quality is more important than breadth.
+
+======================================================================
+32. REPRESENTATIVE END-TO-END BUSINESS SCENARIO
+======================================================================
+
+Use Case A — Position & Exposure
+
+Sources:
+
+- Azure SQL -> Trade, Portfolio, Instrument, Counterparty, Account
+- Position file -> Position
+- REST API -> FX rates
+- Event Hub/Kafka -> Trade events
+
+Silver:
+
+- Trade
+- Instrument
+- Portfolio
+- Position
+- Counterparty
+- Account
+- Market Data / FX
+
+Gold:
+
+gold.position_exposure
+
+Potential business outputs:
+
+- market value by portfolio
+- exposure by instrument
+- exposure by counterparty
+- market value by currency
+- CAD/common-currency market value using FX
+
+Platinum:
+
+- Databricks dashboard dataset
+- Power BI dataset
+- outbound position/exposure extract
+
+This one use case should show cross-source integration.
+
+======================================================================
+33. FAILURE / REMEDIATION DEMO SCENARIO
+======================================================================
+
+Create at least one controlled failure.
+
+Preferred scenario:
+
+A position file arrives with one or more:
+
+- unknown instrument_id
+- null portfolio_id
+- duplicate position_id
+- invalid currency
+
+Expected flow:
+
+File arrives
+-> Landing
+-> Bronze
+-> DQX technical check
+-> Bronze or Silver validation
+-> record/file quarantined as appropriate
+-> monitoring records failure
+-> alert generated
+-> issue corrected
+-> file/record reprocessed
+-> DQ passes
+-> Silver/Gold refreshed
+-> audit trail retained
+
+This demonstrates a complete operational control lifecycle.
+
+======================================================================
+34. DISsertation / VIVA EVIDENCE TO CAPTURE
+======================================================================
+
+Capture evidence continuously.
+
+Required screenshots/artifacts where possible:
+
+- overall architecture diagram
+- source systems
+- Azure SQL schema/data
+- file-source example
+- Event Hub/Kafka events
+- REST API response
+- metadata configuration
+- Landing volume/path
+- Bronze tables with audit metadata
+- Bronze DQX results
+- quarantine table
+- Silver canonical entities
+- Silver DQX results
+- source-to-canonical mapping
+- reference-data mapping
+- Gold product
+- Platinum object
+- Unity Catalog Catalog Explorer
+- ownership/permissions
+- lineage
+- scheduled job
+- file-triggered job
+- streaming job
+- pipeline run history
+- monitoring dashboard
+- alert example
+- remediation/reprocessing
+- audit log example
+- cost/usage observation
+- Databricks dashboard
+- Power BI dashboard
+- database delivery
+- file/email delivery
+- validation/reconciliation outputs
+
+Never include confidential organizational information.
+
+======================================================================
+35. IMPLEMENTATION GUARDRAILS FOR CLAUDE
+======================================================================
+
+When generating artifacts for this project:
+
+1. Keep all examples synthetic and anonymized.
+2. Do not use CIBC internal system names, table names, schemas, clients, or proprietary data.
+3. Do not fabricate results.
+4. Do not claim performance improvements until measured.
+5. Do not claim production readiness.
+6. Prefer reusable/config-driven patterns over repeated code.
+7. Keep notebooks thin; move reusable logic into modules/functions where practical.
+8. Use idempotent scripts where possible.
+9. Keep DDL, DML, configuration, tests, and application code under source control.
+10. Never commit credentials.
+11. Parameterize environment-specific values.
+12. Use meaningful logging.
+13. Add run_id/batch_id wherever relevant.
+14. Maintain source-to-target traceability.
+15. Prefer managed Unity Catalog tables for Bronze/Silver/Gold/Platinum where practical.
+16. Prefer governed external volumes for Landing.
+17. Gold is reusable business data.
+18. Platinum is consumer-specific serving.
+19. DQX is required at Bronze and Silver.
+20. Monitoring and audit must be designed from the beginning rather than added at the end.
+21. The final implementation must be easy to demonstrate in a 20-minute academic presentation.
+22. Keep code and architecture understandable enough for the student to explain and defend independently.
+
+======================================================================
+36. FIRST CLAUDE TASKS
+======================================================================
+
+When starting implementation, Claude should NOT attempt the entire platform in one step.
+
+Start with Phase 1:
+
+A. Create the EDIP repository structure.
+B. Create a README describing the architecture.
+C. Create the Azure SQL source-system artifacts:
+   - schema creation
+   - tables
+   - constraints
+   - indexes
+   - seed reference data
+   - synthetic trade data
+   - incremental update test data
+D. Create synthetic data-generation scripts.
+E. Add documentation explaining how to execute and validate the source database.
+
+Proposed Azure SQL artifact files:
+
+01_source_systems/azure_sql/ddl/01_create_schema.sql
+01_source_systems/azure_sql/ddl/02_create_tables.sql
+01_source_systems/azure_sql/ddl/03_constraints_indexes.sql
+01_source_systems/azure_sql/seed_data/04_seed_reference_data.sql
+01_source_systems/azure_sql/seed_data/05_seed_transactions.sql
+01_source_systems/azure_sql/incremental_data/06_incremental_test_data.sql
+01_source_systems/azure_sql/scripts/generate_synthetic_data.py
+01_source_systems/azure_sql/README.md
+
+Before execution against Azure:
+- show the planned DDL
+- keep scripts repeatable where practical
+- verify table relationships
+- verify synthetic data consistency
+- confirm no secrets are embedded
+
+======================================================================
+37. DEFINITION OF DONE
+======================================================================
+
+The EDIP prototype is complete when an examiner can follow a representative business record or dataset through:
+
+Source
+-> Landing
+-> Bronze
+-> Silver canonical model
+-> Gold business product
+-> Platinum serving object
+-> Consumer
+
+and can also inspect:
+
+- metadata
+- DQ controls
+- quarantine/remediation
+- lineage
+- access controls
+- orchestration
+- monitoring
+- alerts
+- audit evidence
+- validation/reconciliation
+
+The prototype does not need production scale.
+
+It must be coherent, governed, demonstrable, evidence-based, and defendable.
+
+======================================================================
+END OF EDIP CLAUDE IMPLEMENTATION CONTEXT
+======================================================================

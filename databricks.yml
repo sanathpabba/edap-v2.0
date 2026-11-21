@@ -1,0 +1,10 @@
+bundle:
+  name: edap
+
+targets:
+  dev:
+    default: true
+    mode: development
+  test: {}
+  prod:
+    mode: production

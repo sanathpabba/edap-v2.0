@@ -1,0 +1,18 @@
+# secrets / credentials
+.databrickscfg
+.databrickscfg.*
+config/*.env
+.env*
+*.pem
+*.key
+chat.json
+
+# python / tooling
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.DS_Store
+*.egg-info/
+dist/
+build/
