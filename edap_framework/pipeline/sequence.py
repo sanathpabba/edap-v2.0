@@ -1,7 +1,7 @@
-"""Run a pipeline folder: discover the ordinal step files (NN_name.py) and call their run(ctx) in order, for each item.
+"""Run a pipeline: for each table (item) of the layer, discover its ordinal step files (NN_name.py) and call their run(ctx) in order.
 
-  pipelines/<AssetClass>/<layer>/<Routine|Adhoc>/01_init_context.py ... NN_*.py
-Each step file only calls a framework function; the sequence lives in the file names."""
+  pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/01_init_context.py ... NN_*.py
+Each table has its own folder and step files; each step file only calls a framework function. The sequence lives in the file names."""
 import importlib.util
 import os
 import re
@@ -11,8 +11,8 @@ from edap_framework.core import config
 STEP_RX = re.compile(r"^(\d{2})_([a-z0-9_]+)\.py$")
 
 
-def steps_dir(asset_class_folder, layer, mode):
-    return os.path.join(config.project_root(), "pipelines", asset_class_folder, layer, mode)
+def steps_dir(asset_class_folder, layer, table_folder, mode):
+    return os.path.join(config.project_root(), "pipelines", asset_class_folder, layer, table_folder, mode)
 
 
 def discover(directory):
@@ -36,14 +36,22 @@ def _load(path):
 
 
 def run_sequence(ctx, only_items=None, first=1, last=99, dry_run=False, out=print):
-    steps = [s for s in discover(steps_dir(ctx.ac.folder, ctx.layer, ctx.mode)) if first <= s[0] <= last]
-    items = [i for i in ctx.items if not only_items or i in only_items]
-    out("== %s  | items: %s | steps %02d-%02d" % (ctx.describe(), ", ".join(items) or "-", steps[0][0] if steps else 0, steps[-1][0] if steps else 0))
+    """Run the steps of every selected table. only_items may hold spec items (file-loads/positions, trade) or table folders (file_positions)."""
+    wanted = lambda item: not only_items or item in only_items or config.table_folder(ctx.layer, item) in only_items
+    items = [i for i in ctx.items if wanted(i)]
+    out("== %s | tables: %s" % (ctx.describe(), ", ".join(config.table_folder(ctx.layer, i) for i in items) or "-"))
+    total = 0
     for item in items:
         ctx.item = item
-        out("-- item: %s" % item)
+        folder = config.table_folder(ctx.layer, item)
+        steps = [s for s in discover(steps_dir(ctx.ac.folder, ctx.layer, folder, ctx.mode)) if first <= s[0] <= last]
+        out("-- table: %s/%s/%s  (%s) steps %02d-%02d" % (ctx.layer, folder, ctx.mode, item, steps[0][0] if steps else 0, steps[-1][0] if steps else 0))
         for order, name, path in steps:
             out("   %02d %s" % (order, name))
             if not dry_run:
-                _load(path).run(ctx)
-    return len(items) * len(steps)
+                mod = _load(path)
+                if getattr(mod, "ITEM", item) != item:
+                    raise RuntimeError("%s declares ITEM %s but runs for %s" % (path, mod.ITEM, item))
+                mod.run(ctx)
+            total += 1
+    return total

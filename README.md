@@ -11,7 +11,7 @@ Principle: **everything configurable lives in `definitions/` (YAML); `edap_frame
 |---|---|
 | `definitions/` | sources, landing/bronze specs per source, mappings (Silver), DQ rules, reference data, Gold products, governance, environments |
 | `edap_framework/` | generic engines and the step functions: `pipeline/` (context, sequence, `<layer>_steps.py`), ingestion, bronze, silver, dq (DQX), gold, governance, core |
-| `pipelines/` | the pipelines: `<AssetClass>/<layer>/<Routine\|Adhoc>/NN_<step>.py` - every numbered file calls one framework function; `run.py` executes them in order |
+| `pipelines/` | the pipelines: `<AssetClass>/<layer>/<table>/<Routine\|Adhoc>/NN_<step>.py` - every numbered file calls one framework function; `run.py` executes them in order |
 | `runners/` | utilities: definition validator, SQL-table scaffold, reference-data and governance runners |
 | `source_generators/` | synthetic source systems (Azure SQL, position files, Event Hubs events, FX REST API) with D0/D1/D2 demo scenarios |
 | `deployment/` | Unity Catalog setup SQL, Databricks job definitions |

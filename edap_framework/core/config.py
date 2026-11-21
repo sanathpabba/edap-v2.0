@@ -71,3 +71,13 @@ def list_tables(layer, source_folder):
 def storage_uri(env, container, path=""):
     st = env["storage"]
     return st["uri_template"].format(container=st["containers"][container], account=st["account"], path=path.lstrip("/"))
+
+
+def table_folder(layer, item):
+    """Folder name of a table/entity/product inside pipelines/<AssetClass>/<layer>/.
+    landing/bronze items are '<source>-loads/<table>' -> '<source>_<table>' (e.g. sql-loads/trades -> sql_trades);
+    silver/gold items are already plain names (trade, trade_analytics)."""
+    if "/" in item:
+        src, table = item.split("/", 1)
+        return "%s_%s" % (src.replace("-loads", ""), table)
+    return item

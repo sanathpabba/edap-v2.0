@@ -29,7 +29,8 @@ def test_rule_columns_reads_sql_expressions():
 
 @pytest.fixture
 def broken_copy(tmp_path):
-    shutil.copytree(os.path.join(config.project_root(), "definitions"), tmp_path / "definitions")
+    for d in ("definitions", "pipelines", "edap_framework/pipeline"):
+        shutil.copytree(os.path.join(config.project_root(), d), tmp_path / d)
     old = config._ROOT
     config._ROOT = str(tmp_path)
     yield tmp_path

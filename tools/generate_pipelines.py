@@ -1,6 +1,6 @@
 """Generate the pipeline folder tree from the asset-class definitions and the step tables below.
 
-  pipelines/<AssetClass>/<layer>/<Routine|Adhoc>/NN_<step>.py   (each file = one framework function call)
+  pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/NN_<step>.py   (each file = one framework function call)
   deployment/jobs.yml                                           (Databricks jobs wired to the same folders)
 
 Edit LAYER_STEPS to change the sequence, then re-run:  python tools/generate_pipelines.py
@@ -67,18 +67,21 @@ LAYER_STEPS = {
 MODES = ["Routine", "Adhoc"]
 README = """# Pipelines
 
-`pipelines/<AssetClass>/<layer>/<Routine|Adhoc>/NN_<step>.py`
+`pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/NN_<step>.py`
+
+- **One folder per table** (bronze/landing: `sql_trades`, `file_positions` ...; silver: entity; gold: data product), so an asset class can hold
+  hundreds of tables and each keeps its own step files. The tables of a layer are listed, in run order, in `definitions/asset_classes/*.yml`.
 
 - **Asset classes:** Equities, FixedIncome, FX, Commodities, plus **Common** (landing for every source, instrument master, portfolios, accounts,
   counterparties, FX rates, the conformed FX dimension). Common runs first.
 - **Layers:** landing (Common only), bronze, silver, gold.
 - **Routine** = the scheduled incremental run. **Adhoc** = on demand: initial load, backfill, replay, rebuild, what-if.
 - **Each numbered file calls one framework function** (`edap_framework/pipeline/<layer>_steps.py`); the order of the files is the pipeline.
-  A runner executes the steps in order for every item of the layer (tables / entities / products), as listed in `definitions/asset_classes/*.yml`.
+  The runner executes each table's steps in order, table after table.
 
 ```bash
 python pipelines/run.py --asset-class Equities --layer bronze --mode Routine
-python pipelines/run.py --asset-class Equities --layer silver --mode Adhoc --item trade --from-ts 2026-11-17
+python pipelines/run.py --asset-class Equities --layer silver --mode Adhoc --item trade --from-ts 2026-11-17     # one table
 python pipelines/run.py --asset-class Equities --layer bronze --mode Routine --steps 1-5 --dry-run      # show the plan
 python pipelines/run.py --asset-class ALL --layer silver --mode Routine                                  # Common, then every asset class
 ```
@@ -86,37 +89,37 @@ Regenerate this tree after editing the step tables: `python tools/generate_pipel
 """
 
 
-def step_file(ac, layer, mode, order, fn, title, rnote, anote):
+def step_file(ac, layer, item, mode, order, fn, title, rnote, anote):
     note = (anote if mode == "Adhoc" else rnote)
     note_txt = "\n%s mode: %s\n" % (mode, note) if note else ""
-    return '''"""%s / %s / %s - step %02d: %s.
+    return '''"""%s / %s / %s / %s - step %02d: %s.
 %s"""
 from edap_framework.pipeline import %s_steps as steps
 
+ITEM = "%s"
 STEP = {"order": %d, "name": "%s", "layer": "%s", "mode": "%s"}
 
 
 def run(ctx):
     steps.%s(ctx)
-''' % (ac.folder, layer, mode, order, title, note_txt, layer, order, fn, layer, mode, fn)
+''' % (ac.folder, layer, config.table_folder(layer, item), mode, order, title, note_txt, layer, item, order, fn, layer, mode, fn)
 
 
 def generate():
+    import shutil
     written = 0
     acs = config.list_asset_classes()
+    for ac in acs:                                                   # rebuild the asset class tree from scratch (drops stale tables)
+        shutil.rmtree(os.path.join(ROOT, "pipelines", ac.folder), ignore_errors=True)
     for ac in acs:
         for layer, steps in LAYER_STEPS.items():
-            if layer not in ac.items:
-                continue
-            for mode in MODES:
-                d = os.path.join(ROOT, "pipelines", ac.folder, layer, mode)
-                os.makedirs(d, exist_ok=True)
-                for f in os.listdir(d):
-                    if f.endswith(".py"):
-                        os.remove(os.path.join(d, f))
-                for i, (fn, title, rn, an) in enumerate(steps, 1):
-                    open(os.path.join(d, "%02d_%s.py" % (i, fn)), "w").write(step_file(ac, layer, mode, i, fn, title, rn, an))
-                    written += 1
+            for item in ac.items.get(layer, []):
+                for mode in MODES:
+                    d = os.path.join(ROOT, "pipelines", ac.folder, layer, config.table_folder(layer, item), mode)
+                    os.makedirs(d, exist_ok=True)
+                    for i, (fn, title, rn, an) in enumerate(steps, 1):
+                        open(os.path.join(d, "%02d_%s.py" % (i, fn)), "w").write(step_file(ac, layer, item, mode, i, fn, title, rn, an))
+                        written += 1
     open(os.path.join(ROOT, "pipelines", "README.md"), "w").write(README)
     write_jobs(acs)
     return written

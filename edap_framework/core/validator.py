@@ -93,30 +93,46 @@ def validate():
             _check_columns("sources/azure_sql_trading.yml:" + o["name"], o["columns"], err)
     src_cols = {o["name"]: set(o["columns"]) for o in src["objects"] if o.get("ingest", True) is not False and "columns" in o}
 
-    # ---- pipelines folder tree
+    # ---- pipelines folder tree: pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/NN_<step>.py
+    root = config.project_root()
     for a in acs:
-        for layer in a.items:
-            seqs = {}
-            for mode in ("Routine", "Adhoc"):
-                d = os.path.join(config.project_root(), "pipelines", a.folder, layer, mode)
-                if not os.path.isdir(d):
-                    err("pipelines/%s/%s/%s missing" % (a.folder, layer, mode)); continue
-                files = sorted(f for f in os.listdir(d) if re.match(r"^\d{2}_[a-z0-9_]+\.py$", f))
-                nums = [int(f[:2]) for f in files]
-                if nums != list(range(1, len(nums) + 1)) or not 8 <= len(nums) <= 10:
-                    err("pipelines/%s/%s/%s: steps must be 01..NN with 8-10 files, found %s" % (a.folder, layer, mode, nums))
-                fns = _step_functions(layer)
-                calls = []
-                for f in files:
-                    call = _step_call(os.path.join(d, f))
-                    calls.append(call)
-                    if call is None or call not in fns:
-                        err("pipelines/%s/%s/%s/%s: calls %s which is not in %s_steps.py" % (a.folder, layer, mode, f, call, layer))
-                    elif f[3:-3] != call:
-                        err("pipelines/%s/%s/%s/%s: file name does not match function %s" % (a.folder, layer, mode, f, call))
-                seqs[mode] = calls
-            if len(seqs) == 2 and seqs["Routine"] != seqs["Adhoc"]:
-                err("pipelines/%s/%s: Routine and Adhoc step sequences differ" % (a.folder, layer))
+        for layer, items in a.items.items():
+            if layer in LAYERS:
+                folders = [config.table_folder(layer, i) for i in items]
+                if len(set(folders)) != len(folders):
+                    err("asset_classes/%s: %s items map to duplicate table folders" % (a.folder, layer))
+            fns = _step_functions(layer) if layer in LAYERS else set()
+            layer_dir = os.path.join(root, "pipelines", a.folder, layer)
+            expected = {config.table_folder(layer, i): i for i in items}
+            actual = set(os.listdir(layer_dir)) - {"__pycache__"} if os.path.isdir(layer_dir) else set()
+            for orphan in sorted(actual - set(expected)):
+                err("pipelines/%s/%s/%s: table folder is not listed in definitions/asset_classes/%s.yml" % (a.folder, layer, orphan, a.prefix))
+            for folder, item in expected.items():
+                seqs = {}
+                for mode in ("Routine", "Adhoc"):
+                    d = os.path.join(layer_dir, folder, mode)
+                    where = "pipelines/%s/%s/%s/%s" % (a.folder, layer, folder, mode)
+                    if not os.path.isdir(d):
+                        err("%s missing" % where); continue
+                    files = sorted(f for f in os.listdir(d) if re.match(r"^\d{2}_[a-z0-9_]+\.py$", f))
+                    nums = [int(f[:2]) for f in files]
+                    if nums != list(range(1, len(nums) + 1)) or not 8 <= len(nums) <= 10:
+                        err("%s: steps must be 01..NN with 8-10 files, found %s" % (where, nums))
+                    calls = []
+                    for f in files:
+                        text = open(os.path.join(d, f)).read()
+                        call = _step_call(os.path.join(d, f))
+                        calls.append(call)
+                        m = re.search(r'^ITEM = "([^"]+)"', text, re.M)
+                        if not m or m.group(1) != item:
+                            err("%s/%s: ITEM must be %r" % (where, f, item))
+                        if call is None or call not in fns:
+                            err("%s/%s: calls %s which is not in %s_steps.py" % (where, f, call, layer))
+                        elif f[3:-3] != call:
+                            err("%s/%s: file name does not match function %s" % (where, f, call))
+                    seqs[mode] = calls
+                if len(seqs) == 2 and seqs["Routine"] != seqs["Adhoc"]:
+                    err("pipelines/%s/%s/%s: Routine and Adhoc step sequences differ" % (a.folder, layer, folder))
 
     # ---- landing items
     for a in acs:

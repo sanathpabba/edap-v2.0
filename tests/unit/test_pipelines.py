@@ -16,22 +16,37 @@ def test_asset_classes_are_the_requested_folders():
     assert sorted(a.folder for a in config.list_asset_classes()) == sorted(FOLDERS)
 
 
-def test_every_asset_class_has_bronze_silver_gold_with_routine_and_adhoc():
-    for f in FOLDERS:
+def test_every_asset_class_has_bronze_silver_gold_with_routine_and_adhoc_per_table():
+    for a in config.list_asset_classes():
         for layer in ("bronze", "silver", "gold"):
-            for mode in ("Routine", "Adhoc"):
-                d = os.path.join(config.project_root(), "pipelines", f, layer, mode)
-                steps = discover(d)
-                assert 8 <= len(steps) <= 10, (d, len(steps))
+            assert a.items.get(layer), (a.folder, layer)
+            for item in a.items[layer]:
+                for mode in ("Routine", "Adhoc"):
+                    d = os.path.join(config.project_root(), "pipelines", a.folder, layer, config.table_folder(layer, item), mode)
+                    assert 8 <= len(discover(d)) <= 10, d
+
+
+def test_table_folder_naming():
+    assert config.table_folder("bronze", "sql-loads/trades") == "sql_trades"
+    assert config.table_folder("bronze", "file-loads/positions") == "file_positions"
+    assert config.table_folder("landing", "stream-loads/trade_events") == "stream_trade_events"
+    assert config.table_folder("silver", "trade") == "trade" and config.table_folder("gold", "pnl_finance") == "pnl_finance"
+
+
+def test_table_folders_on_disk_match_asset_class_items_exactly():
+    for a in config.list_asset_classes():
+        for layer, items in a.items.items():
+            on_disk = set(os.listdir(os.path.join(config.project_root(), "pipelines", a.folder, layer))) - {"__pycache__"}
+            assert on_disk == {config.table_folder(layer, i) for i in items}, (a.folder, layer)
 
 
 def test_common_has_landing_and_asset_classes_do_not():
-    assert os.path.isdir(os.path.join(config.project_root(), "pipelines", "Common", "landing", "Routine"))
+    assert os.path.isdir(os.path.join(config.project_root(), "pipelines", "Common", "landing", "sql_trades", "Routine"))
     assert not os.path.exists(os.path.join(config.project_root(), "pipelines", "Equities", "landing"))
 
 
 def test_step_files_are_thin_and_call_one_framework_function():
-    d = os.path.join(config.project_root(), "pipelines", "Equities", "bronze", "Routine")
+    d = os.path.join(config.project_root(), "pipelines", "Equities", "bronze", "sql_trades", "Routine")
     for f in os.listdir(d):
         if f.endswith(".py"):
             text = open(os.path.join(d, f)).read()
@@ -64,6 +79,15 @@ def test_dry_run_plans_every_step_in_order():
     lines = []
     n = run_sequence(ctx, dry_run=True, out=lines.append)
     assert n == 4 * 10 and [l.split()[0] for l in lines if re.match(r"^\s+\d\d ", l)][:10] == ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]
+    assert any("-- table: silver/trade/Routine" in l for l in lines)
+
+
+def test_item_filter_accepts_table_folder_or_spec_item():
+    ctx = PipelineContext("Equities", "bronze", "Routine", spark=None, env={"catalog": "edap"})
+    for sel in ({"file_positions"}, {"file-loads/positions"}):
+        lines = []
+        assert run_sequence(ctx, sel, dry_run=True, out=lines.append) == 10
+        assert any("bronze/file_positions/Routine" in l for l in lines)
 
 
 def test_common_runs_first_and_all_selects_every_pipeline():
@@ -86,18 +110,18 @@ def broken_tree(tmp_path):
 
 
 def test_validator_catches_missing_step_file(broken_tree):
-    os.remove(broken_tree / "pipelines/FX/silver/Routine/05_apply_canonical_mapping.py")
-    assert any("FX/silver/Routine" in e for e in validate()[0])
+    os.remove(broken_tree / "pipelines/FX/silver/trade/Routine/05_apply_canonical_mapping.py")
+    assert any("FX/silver/trade/Routine" in e for e in validate()[0])
 
 
 def test_validator_catches_step_calling_unknown_function(broken_tree):
-    p = broken_tree / "pipelines/FX/gold/Adhoc/05_compose_sql.py"
+    p = broken_tree / "pipelines/FX/gold/trade_analytics/Adhoc/05_compose_sql.py"
     p.write_text(p.read_text().replace("steps.compose_sql(ctx)", "steps.does_not_exist(ctx)"))
     assert any("does_not_exist" in e for e in validate()[0])
 
 
 def test_validator_catches_routine_adhoc_mismatch(broken_tree):
-    p = broken_tree / "pipelines/FX/gold/Adhoc/05_compose_sql.py"
+    p = broken_tree / "pipelines/FX/gold/trade_analytics/Adhoc/05_compose_sql.py"
     p.write_text(p.read_text().replace("steps.compose_sql(ctx)", "steps.check_upstream(ctx)"))
     assert any("differ" in e or "file name does not match" in e for e in validate()[0])
 
@@ -124,3 +148,19 @@ def test_validator_catches_item_without_spec(broken_tree):
     p = broken_tree / "definitions/asset_classes/fx.yml"
     p.write_text(p.read_text().replace("gold: [trade_analytics,", "gold: [nonexistent_product, trade_analytics,"))
     assert any("nonexistent_product" in e for e in validate()[0])
+
+
+def test_validator_catches_missing_table_folder(broken_tree):
+    shutil.rmtree(broken_tree / "pipelines/FX/bronze/sql_trades")
+    assert any("FX/bronze/sql_trades" in e and "missing" in e for e in validate()[0])
+
+
+def test_validator_catches_orphan_table_folder(broken_tree):
+    shutil.copytree(broken_tree / "pipelines/FX/silver/trade", broken_tree / "pipelines/FX/silver/not_listed")
+    assert any("not_listed" in e and "not listed" in e for e in validate()[0])
+
+
+def test_validator_catches_wrong_item_in_step_file(broken_tree):
+    p = broken_tree / "pipelines/FX/silver/trade/Routine/03_load_reference_data.py"
+    p.write_text(p.read_text().replace('ITEM = "trade"', 'ITEM = "position"'))
+    assert any("ITEM must be" in e for e in validate()[0])
