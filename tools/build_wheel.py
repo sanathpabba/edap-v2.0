@@ -47,7 +47,7 @@ def verify(wheel):
                     problems.append("missing in wheel: %s" % rel)
     ep = [n for n in names if n.endswith("entry_points.txt")]
     entry = z.read(ep[0]).decode() if ep else ""
-    for cmd in ("edap-run", "edap-validate", "edap-master"):
+    for cmd in ("edap-run", "edap-validate", "edap-master", "edap-admin"):
         if cmd not in entry:
             problems.append("console command %s missing" % cmd)
     if "edap_framework/cli.py" not in names:

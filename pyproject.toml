@@ -20,6 +20,7 @@ dev = ["pytest", "build", "pyodbc", "azure-eventhub", "python-dateutil", "databr
 edap-run = "edap_framework.cli:main"
 edap-validate = "edap_framework.core.validator:main"
 edap-master = "edap_framework.master:main"
+edap-admin = "edap_framework.admin.cli:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "edap_framework.__version__" }
