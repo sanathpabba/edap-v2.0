@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: silver.counterparty
+rule_set: silver.${ac}_counterparty
 layer: silver
-target_table: edap.silver.counterparty
+target_table: edap.silver.${ac}_counterparty
 mode: quarantine
 description: Enterprise rules for Counterparty
 checks:

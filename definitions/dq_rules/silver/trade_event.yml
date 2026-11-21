@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: silver.trade_event
+rule_set: silver.${ac}_trade_event
 layer: silver
-target_table: edap.silver.trade_event
+target_table: edap.silver.${ac}_trade_event
 mode: quarantine
 description: Enterprise rules for Trade Event
 checks:

@@ -3,10 +3,10 @@ version: 1
 entity: trade_event
 layer: silver
 depends_on: [trade]
-target: {catalog: edap, schema: silver, table: trade_event}
+target: {catalog: edap, schema: silver, table: ${ac}_trade_event}
 business_key: [event_id]
 source:
-  bronze_table: edap.bronze.stream_trade_events
+  bronze_table: edap.bronze.${ac}_stream_trade_events
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
 
 governance:
@@ -29,7 +29,7 @@ columns:
   eh_offset: "eh_offset"
   eh_enqueued_ts: "eh_enqueued_ts"
 lookups:
-  - {table: edap.silver.trade, on: {trade_id: trade_id}, flag: _ref_trade_ok}
+  - {table: edap.silver.${ac}_trade, on: {trade_id: trade_id}, flag: _ref_trade_ok}
 dedup:
   partition_by: [event_id]
   order_by: ["_ingest_ts DESC"]

@@ -3,10 +3,10 @@ version: 1
 entity: portfolio
 layer: silver
 depends_on: [reference]
-target: {catalog: edap, schema: silver, table: portfolio}
+target: {catalog: edap, schema: silver, table: ${ac}_portfolio}
 business_key: [portfolio_id]
 source:
-  bronze_table: edap.bronze.sql_portfolios
+  bronze_table: edap.bronze.${ac}_sql_portfolios
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
 
 governance:

@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: bronze.sql_trades
+rule_set: bronze.${ac}_sql_trades
 layer: bronze
-target_table: edap.bronze.sql_trades
+target_table: edap.bronze.${ac}_sql_trades
 mode: quarantine
 description: Technical checks on raw trade rows (one row per trade per batch)
 checks:

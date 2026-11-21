@@ -22,8 +22,8 @@ SUMMARY_DDL = """CREATE TABLE IF NOT EXISTS {t} (
   total_rows BIGINT, passed_rows BIGINT, quarantined_rows BIGINT, warned_rows BIGINT, pass_rate DOUBLE, checked_ts TIMESTAMP)"""
 
 
-def load_rule_set(rel_path):
-    rs = config.load_yaml(rel_path)
+def load_rule_set(rel_path, variables=None):
+    rs = config.load_yaml(rel_path, variables)
     rs["_path"] = rel_path
     return rs
 

@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: bronze.stream_trade_events
+rule_set: bronze.${ac}_stream_trade_events
 layer: bronze
-target_table: edap.bronze.stream_trade_events
+target_table: edap.bronze.${ac}_stream_trade_events
 mode: quarantine
 description: Technical checks on raw events; not-JSON, missing trade_id, bad timestamp, negative quantity and unknown event type are caught here
 checks:

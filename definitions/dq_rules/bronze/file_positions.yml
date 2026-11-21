@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: bronze.file_positions
+rule_set: bronze.${ac}_file_positions
 layer: bronze
-target_table: edap.bronze.file_positions
+target_table: edap.bronze.${ac}_file_positions
 mode: quarantine
 description: Technical checks on the raw position file; covers the six injected defect types except unknown_instrument (a Silver referential rule)
 checks:

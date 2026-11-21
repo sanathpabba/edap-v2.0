@@ -3,7 +3,7 @@ from pyspark.sql import functions as F
 
 
 def exclude_quarantined(spark, df, env, bronze_table):
-    """Drop Bronze rows that DQ quarantined (status OPEN). bronze_table = full name, e.g. edap.bronze.file_positions. Matches on table + _row_hash."""
+    """Drop Bronze rows that DQ quarantined (status OPEN). bronze_table = full name, e.g. edap.bronze.equities_file_positions. Matches on table + _row_hash."""
     q = "%s.quarantine.bronze_invalid" % env["catalog"]
     if not spark.catalog.tableExists(q):
         return df

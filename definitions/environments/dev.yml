@@ -13,4 +13,5 @@ secrets:
     sql_user: sql-admin-user
     sql_password: sql-admin-password
     eventhub_listen: eventhub-listen-connection-string
+eventhub_namespace: edap-eventhubs-645ca5
 schemas: {bronze: bronze, metadata: metadata, audit: audit}

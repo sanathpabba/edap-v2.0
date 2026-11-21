@@ -4,7 +4,7 @@ Everything below is driven by YAML in `definitions/`; the code in `edap_framewor
 (the one exception is the registered `fx_flatten` transform, referenced by name from `mappings/market_data.yml`).
 
 ## Flow and run order
-`runners/` : `reference_load` -> `dq_bronze --source <each>` -> `silver_load` -> `gold_build` -> `governance_apply`
+`pipelines/run.py` : Common (landing, bronze, silver incl. reference data, gold) -> each asset class (bronze -> silver -> gold) -> `runners/governance_apply.py`. Table names carry the pipeline prefix, e.g. `edap.silver.equities_trade`, `edap.gold.fixed_income_pnl_finance`; shared entities are `common_*`. See [pipelines.md](pipelines.md).
 
 | Step | YAML | Code | Output |
 |---|---|---|---|

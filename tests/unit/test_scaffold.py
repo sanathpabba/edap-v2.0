@@ -9,11 +9,11 @@ TABLES = ["reference.instruments", "reference.portfolios", "reference.accounts",
 
 def test_scaffold_reproduces_existing_specs(tmp_path):
     for obj in TABLES:
-        written = scaffold(obj, root=str(tmp_path))
+        written = scaffold(obj, root=str(tmp_path), route_column="sec_code" if obj == "source.trades" else None)
         assert len(written) == 3
         for rel in written[:2]:                                       # landing + bronze
-            mine = __import__("yaml").safe_load(open(tmp_path / rel))
-            old = config.load_yaml(rel)
+            mine = config.load_yaml(str(tmp_path / rel)) if False else __import__("yaml").safe_load(open(tmp_path / rel))
+            old = __import__("yaml").safe_load(open(os.path.join(config.project_root(), rel)))
             assert mine == old, rel
 
 

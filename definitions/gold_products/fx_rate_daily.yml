@@ -3,7 +3,7 @@
 version: 1
 product: fx_rate_daily
 layer: gold
-target: {catalog: edap, schema: gold, table: fx_rate_daily}
+target: {catalog: edap, schema: gold, table: ${ac}_fx_rate_daily}
 documentation:
   business_purpose: Single, gap-free USD conversion rate per currency and calendar day
   grain: one row per rate_date x currency
@@ -15,13 +15,13 @@ documentation:
   refresh_pattern: full rebuild after each Silver market_data load
   intended_consumers: [trade_analytics, position_exposure, pnl_finance, regulatory_reporting]
 with:
-  - {name: bounds, sql: "SELECT min(rate_date) AS mn, max(rate_date) AS mx FROM edap.silver.market_data"}
+  - {name: bounds, sql: "SELECT min(rate_date) AS mn, max(rate_date) AS mx FROM edap.silver.common_market_data"}
   - {name: cal, sql: "SELECT explode(sequence(mn, mx, interval 1 day)) AS cal_date FROM bounds"}
-  - {name: ccy, sql: "SELECT DISTINCT quote_currency AS currency FROM edap.silver.market_data"}
+  - {name: ccy, sql: "SELECT DISTINCT quote_currency AS currency FROM edap.silver.common_market_data"}
 from: {table: cal, alias: c}
 joins:
   - {type: cross, table: ccy, alias: y}
-  - {type: left, table: edap.silver.market_data, alias: m, on: "m.rate_date = c.cal_date AND m.quote_currency = y.currency AND m.base_currency = 'USD'"}
+  - {type: left, table: edap.silver.common_market_data, alias: m, on: "m.rate_date = c.cal_date AND m.quote_currency = y.currency AND m.base_currency = 'USD'"}
 select:
   dimensions:
     rate_date: "c.cal_date"

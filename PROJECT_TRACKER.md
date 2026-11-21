@@ -23,7 +23,7 @@
 | 3 | Source 3 - Streaming Trade Events | 7 | 7 | 0 | 0 | 0 | 0 |
 | 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
 | 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
-| 6 | YAML Specification & Framework Core | 6 | 0 | 3 | 0 | 0 | 3 |
+| 6 | YAML Specification & Framework Core | 9 | 0 | 6 | 0 | 0 | 3 |
 | 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 6 | 0 | 0 | 2 |
 | 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 6 | 0 | 0 | 0 |
 | 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
@@ -35,9 +35,9 @@
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 3 | 0 | 0 | 0 | 0 | 3 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 2 | 0 | 0 | 3 |
-| | **TOTAL** | **109** | **48** | **36** | **0** | **0** | **25** |
+| | **TOTAL** | **112** | **48** | **39** | **0** | **0** | **25** |
 
-**Verified complete: 48/109 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
+**Verified complete: 48/112 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
 ## Demo scenario this plan builds toward
 
@@ -178,6 +178,9 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
 | FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | deployment/unity_catalog_setup.sql (catalog + 10 schemas); not run |
 | FWK-06 | Packaging | Build wheel, install on cluster, import test | 📋 TODO | P1 | FWK-02 | `import edap_framework` on both workspaces |
+| FWK-07 | Asset-class pipeline structure | pipelines/<AssetClass>/<bronze|silver|gold>/<Routine|Adhoc>/ for Equities, FixedIncome, FX, Commodities plus Common (landing + shared entities); asset-class YAMLs; ${ac} templating; routing by instrument | 🔄 BUILT, NOT VALIDATED | P0 | FWK-02 | definitions/asset_classes/*.yml, pipelines/ (306 step files), docs/architecture/pipelines.md; 37 offline tests incl. routing/overlap/negative cases; not run on Databricks |
+| FWK-08 | Ordinal step files + sequence runner | 8-10 numbered step files per layer, each calling one framework function; pipelines/run.py executes them in order per item; dry-run plan; tools/generate_pipelines.py regenerates the tree | 🔄 BUILT, NOT VALIDATED | P0 | FWK-07 | edap_framework/pipeline/{context,sequence,landing_steps,bronze_steps,silver_steps,gold_steps}.py; dry-run and step-wiring tests pass offline; not run on Databricks |
+| FWK-09 | Routine vs Adhoc behaviours | Same steps, mode-aware: Routine incremental/scheduled; Adhoc initial load, backfill, replay (no duplicates), rebuild, what-if parameters | 🔄 BUILT, NOT VALIDATED | P1 | FWK-08 | Documented in docs/architecture/pipelines.md; replay/rebuild logic in bronze/silver/gold step functions; needs a run to verify |
 
 ---
 
@@ -187,11 +190,11 @@ _Generic ingestion engine driven by YAML for all four sources._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| BRZ-01 | Generic reader - SQL | JDBC read, full + incremental by watermark | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | edap_framework/ingestion/sql/extract.py + definitions/landing|bronze/sql-loads/*.yml (5 tables); not run |
-| BRZ-02 | Generic reader - files | Auto Loader / batch on inbound, file registry | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/files/arrival.py + file-loads/positions.yml (landing + bronze); not run |
-| BRZ-03 | Generic reader - streaming | Structured Streaming from Event Hubs, checkpoint | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/streaming/eventhub_to_landing.py + stream-loads/trade_events.yml; not run |
-| BRZ-04 | Generic reader - REST | API pull to landing then Bronze | 🔄 BUILT, NOT VALIDATED | P1 | FWK-04 | ingestion/rest_api/fx_pull.py + api-loads/fx_rates.yml; not run |
-| BRZ-05 | Bronze writer + audit columns | Standard _source/_ingestion/_batch/_run/_hash columns | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | bronze/loader.py adds _source_system/_source_object/_source_file/_landing_batch_id/_batch_id/_run_id/_row_hash/_spec_path/_spec_version/_ingest_ts/_ingest_date + UC comment and tags from spec; not run |
+| BRZ-01 | Generic reader - SQL | JDBC read, full + incremental by watermark | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/sql/extract.py split into steps (resolve_window, read_extract, write_extract, commit_watermark) + definitions/landing|bronze/sql-loads/*.yml (5 tables); Common/landing steps 01-08; not run |
+| BRZ-02 | Generic reader - files | Auto Loader / batch on inbound, file registry | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/files/arrival.py (scan_arrivals, register_arrivals) + file-loads/positions.yml; Common/landing + asset-class bronze steps; not run |
+| BRZ-03 | Generic reader - streaming | Structured Streaming from Event Hubs, checkpoint | 🔄 BUILT, NOT VALIDATED | P0 | FWK-04 | ingestion/streaming/eventhub_to_landing.py (build/write stream; Adhoc replays from earliest) + stream-loads/trade_events.yml; not run |
+| BRZ-04 | Generic reader - REST | API pull to landing then Bronze | 🔄 BUILT, NOT VALIDATED | P1 | FWK-04 | ingestion/rest_api/fx_pull.py (fetch_fx, write_fx, register_fx) + api-loads/fx_rates.yml; not run |
+| BRZ-05 | Bronze writer + audit columns | Standard _source/_ingestion/_batch/_run/_hash columns | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | bronze/loader.py (read_landing, shape_columns, route_to_asset_class, add_meta_properties, write_bronze) adds _source_system/_source_object/_source_file/_landing_batch_id/_batch_id/_run_id/_row_hash/_spec_path/_spec_version/_ingest_ts/_ingest_date + UC comment and tags from spec; not run |
 | BRZ-06 | Schema validation | Expected vs actual schema, drift handling | 📋 TODO | P1 | BRZ-05 | Drift test case |
 | BRZ-07 | Idempotency | Re-run does not duplicate | 📋 TODO | P0 | BRZ-05 | Re-run count unchanged |
 | BRZ-08 | Onboard a source by YAML only | Add a new table with no code changes | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | runners/scaffold_sql_table.py: generates landing+bronze+starter DQ specs from the source contract; reproduces the 5 existing specs exactly (unit test); docs/runbooks/onboard_new_source_table.md; live onboarding demo still to do |
@@ -205,7 +208,7 @@ _DQX-based declarative checks from YAML with quarantine._
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
 | DQ-01 | DQ wrapper | Framework function reads dq_rules YAML and applies DQX | 🔄 BUILT, NOT VALIDATED | P0 | FND-10, FWK-01 | edap_framework/dq/engine.py: DQX apply_checks_by_metadata, quarantine + results + summary writers; rule sets in definitions/dq_rules/; not run |
-| DQ-02 | Bronze rules | Technical checks per spec | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | definitions/dq_rules/bronze/*.yml (9 rule sets) + dq/bronze_check.py + runners/dq_bronze.py; not run |
+| DQ-02 | Bronze rules | Technical checks per spec | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | definitions/dq_rules/bronze/*.yml (9 rule sets, templated per asset class) run as the last Bronze step (bronze_steps.run_dq_and_audit); not run |
 | DQ-03 | Silver rules | Business/referential checks | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | definitions/dq_rules/silver/*.yml (8 rule sets incl. referential flags from mapping lookups); not run |
 | DQ-04 | Quarantine tables | bronze_invalid, silver_invalid with reasons | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | edap.quarantine.bronze_invalid / silver_invalid written by the engine with failed_rules, record_json, status; not run |
 | DQ-05 | DQ metrics | Rule-level counts and pass/fail summary | 🔄 BUILT, NOT VALIDATED | P1 | DQ-01 | monitoring.dq_results (per rule, incl. zero-failure rules) and monitoring.dq_summary (pass rate) written per run; not run |
@@ -261,9 +264,9 @@ _Scheduled, event-driven and streaming workflows._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| ORC-01 | Scheduled job | SQL incremental + FX daily | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | deployment/jobs.yml: edap-daily-batch-sources (cron) and edap-silver-gold-build (cron) drafted, included from databricks.yml; not deployed |
-| ORC-02 | File-arrival trigger | Position file arrival starts the pipeline | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-02 | deployment/jobs.yml: edap-positions-on-file-arrival (file_arrival trigger on landing/positions/inbound) drafted; not deployed |
-| ORC-03 | Streaming job | Continuous event ingestion | 🔄 BUILT, NOT VALIDATED | P1 | BRZ-03 | deployment/jobs.yml: edap-trade-events-drain (every 15 min, availableNow drain) drafted; not deployed |
+| ORC-01 | Scheduled job | SQL incremental + FX daily | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-01 | deployment/jobs.yml (generated): edap-routine-daily (Common landing/bronze/silver/gold, then each asset class bronze->silver->gold) + edap-adhoc; not deployed |
+| ORC-02 | File-arrival trigger | Position file arrival starts the pipeline | 🔄 BUILT, NOT VALIDATED | P0 | BRZ-02 | deployment/jobs.yml (generated): edap-positions-on-file-arrival (file_arrival trigger -> landing -> each asset-class bronze + silver position); not deployed |
+| ORC-03 | Streaming job | Continuous event ingestion | 🔄 BUILT, NOT VALIDATED | P1 | BRZ-03 | deployment/jobs.yml (generated): edap-trade-events-drain (every 15 min -> landing -> bronze -> silver trade_event per asset class); not deployed |
 | ORC-04 | End-to-end workflow | Landing -> Gold with dependencies | 📋 TODO | P0 | GLD-02 | Successful full run |
 
 ---

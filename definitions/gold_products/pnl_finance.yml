@@ -1,7 +1,7 @@
 version: 1
 product: pnl_finance
 layer: gold
-target: {catalog: edap, schema: gold, table: pnl_finance}
+target: {catalog: edap, schema: gold, table: ${ac}_pnl_finance}
 documentation:
   business_purpose: Daily unrealised P&L and trading costs per portfolio in USD for finance review
   grain: one row per position_date x portfolio
@@ -14,13 +14,13 @@ documentation:
   intended_consumers: [Finance, Management reporting]
 with:
   - name: pos
-    sql: "SELECT s.position_date, s.portfolio_id, sum(s.market_value * f.usd_per_unit) AS mv, sum(s.quantity * s.avg_cost * f.usd_per_unit) AS cost FROM edap.silver.position s LEFT JOIN edap.gold.fx_rate_daily f ON f.rate_date = s.position_date AND f.currency = s.currency GROUP BY s.position_date, s.portfolio_id"
+    sql: "SELECT s.position_date, s.portfolio_id, sum(s.market_value * f.usd_per_unit) AS mv, sum(s.quantity * s.avg_cost * f.usd_per_unit) AS cost FROM edap.silver.${ac}_position s LEFT JOIN edap.gold.common_fx_rate_daily f ON f.rate_date = s.position_date AND f.currency = s.currency GROUP BY s.position_date, s.portfolio_id"
   - name: costs
-    sql: "SELECT t.trade_date AS position_date, t.portfolio_id, sum((t.commission + t.fees) * f.usd_per_unit) AS trading_costs, count(*) AS trade_count FROM edap.silver.trade t LEFT JOIN edap.gold.fx_rate_daily f ON f.rate_date = t.trade_date AND f.currency = t.currency WHERE t.trade_status <> 'CANCELLED' GROUP BY t.trade_date, t.portfolio_id"
+    sql: "SELECT t.trade_date AS position_date, t.portfolio_id, sum((t.commission + t.fees) * f.usd_per_unit) AS trading_costs, count(*) AS trade_count FROM edap.silver.${ac}_trade t LEFT JOIN edap.gold.common_fx_rate_daily f ON f.rate_date = t.trade_date AND f.currency = t.currency WHERE t.trade_status <> 'CANCELLED' GROUP BY t.trade_date, t.portfolio_id"
 from: {table: pos, alias: pos}
 joins:
   - {type: left, table: costs, alias: c, on: "c.position_date = pos.position_date AND c.portfolio_id = pos.portfolio_id"}
-  - {type: left, table: edap.silver.portfolio, alias: p, on: "pos.portfolio_id = p.portfolio_id"}
+  - {type: left, table: edap.silver.common_portfolio, alias: p, on: "pos.portfolio_id = p.portfolio_id"}
 select:
   dimensions:
     position_date: "pos.position_date"

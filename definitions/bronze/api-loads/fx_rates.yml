@@ -21,7 +21,7 @@ json_extract:                           # column -> JSONPath into the envelope t
 target:
   catalog: edap
   schema: bronze
-  table: api_fx_rates
+  table: ${ac}_api_fx_rates
   mode: append
   partition_by: [_ingest_date]
 business_key: [requested_date, _source_file]
@@ -32,6 +32,8 @@ audit_columns:
   _ingest_ts: current_timestamp
   _ingest_date: current_date
   _source_file: file_path
+scope:                              # which rows this pipeline keeps
+  by: none
 lineage:
   landing_batch: registry        # landing batch_id looked up in the landing file registry (edap.audit.file_arrivals)
   row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
@@ -40,7 +42,7 @@ governance:                         # applied as Unity Catalog comment and tags 
   description: "Raw FX API envelopes (response kept as JSON text)"
   owner: market-data-owner
   sensitivity: public
-checkpoint: {container: bronze, path: _checkpoints/api_fx_rates}
+checkpoint: {container: bronze, path: _checkpoints/${ac}_api_fx_rates}
 dq:
   rules_file: definitions/dq_rules/bronze/api_fx_rates.yml
   mode: later

@@ -1,7 +1,7 @@
 version: 1
 product: position_exposure
 layer: gold
-target: {catalog: edap, schema: gold, table: position_exposure}
+target: {catalog: edap, schema: gold, table: ${ac}_position_exposure}
 documentation:
   business_purpose: Daily portfolio positions valued in a common currency (USD) with exposure weights by asset class and portfolio
   grain: one row per position_date x portfolio x instrument
@@ -12,11 +12,11 @@ documentation:
   dq_expectations: unique grain; USD value present; weights within [-1, 1]
   refresh_pattern: full rebuild after each Silver position load (daily)
   intended_consumers: [Risk dashboard, Portfolio managers, Regulatory reporting, Finance]
-from: {table: edap.silver.position, alias: s}
+from: {table: edap.silver.${ac}_position, alias: s}
 joins:
-  - {type: left, table: edap.silver.instrument, alias: i, on: "s.instrument_id = i.instrument_id"}
-  - {type: left, table: edap.silver.portfolio, alias: p, on: "s.portfolio_id = p.portfolio_id"}
-  - {type: left, table: edap.gold.fx_rate_daily, alias: f, on: "f.rate_date = s.position_date AND f.currency = s.currency"}
+  - {type: left, table: edap.silver.${ac}_instrument, alias: i, on: "s.instrument_id = i.instrument_id"}
+  - {type: left, table: edap.silver.common_portfolio, alias: p, on: "s.portfolio_id = p.portfolio_id"}
+  - {type: left, table: edap.gold.common_fx_rate_daily, alias: f, on: "f.rate_date = s.position_date AND f.currency = s.currency"}
 select:
   dimensions:
     position_date: "s.position_date"

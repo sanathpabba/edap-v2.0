@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: gold.trade_analytics
+rule_set: gold.${ac}_trade_analytics
 layer: gold
-target_table: edap.gold.trade_analytics
+target_table: edap.gold.${ac}_trade_analytics
 mode: flag
 description: 'Gold expectations: one row per trade, amounts reconcile'
 checks:

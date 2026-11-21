@@ -1,7 +1,7 @@
 version: 1
 product: regulatory_reporting
 layer: gold
-target: {catalog: edap, schema: gold, table: regulatory_reporting}
+target: {catalog: edap, schema: gold, table: ${ac}_regulatory_reporting}
 documentation:
   business_purpose: Controlled daily counterparty exposure and settlement-failure report with large-exposure flagging
   grain: one row per reporting_date x counterparty
@@ -18,10 +18,10 @@ parameters:
   report_version: "v1"
 with:
   - name: agg
-    sql: "SELECT t.trade_date AS reporting_date, t.counterparty_id, count(*) AS trade_count, sum(t.gross_amount * f.usd_per_unit) AS gross_notional, sum(CASE WHEN t.trade_status = 'FAILED' THEN 1 ELSE 0 END) AS failed_trades FROM edap.silver.trade t LEFT JOIN edap.gold.fx_rate_daily f ON f.rate_date = t.trade_date AND f.currency = t.currency WHERE t.trade_status <> 'CANCELLED' GROUP BY t.trade_date, t.counterparty_id"
+    sql: "SELECT t.trade_date AS reporting_date, t.counterparty_id, count(*) AS trade_count, sum(t.gross_amount * f.usd_per_unit) AS gross_notional, sum(CASE WHEN t.trade_status = 'FAILED' THEN 1 ELSE 0 END) AS failed_trades FROM edap.silver.${ac}_trade t LEFT JOIN edap.gold.common_fx_rate_daily f ON f.rate_date = t.trade_date AND f.currency = t.currency WHERE t.trade_status <> 'CANCELLED' GROUP BY t.trade_date, t.counterparty_id"
 from: {table: agg, alias: a}
 joins:
-  - {type: left, table: edap.silver.counterparty, alias: c, on: "a.counterparty_id = c.counterparty_id"}
+  - {type: left, table: edap.silver.common_counterparty, alias: c, on: "a.counterparty_id = c.counterparty_id"}
 select:
   dimensions:
     reporting_date: "a.reporting_date"

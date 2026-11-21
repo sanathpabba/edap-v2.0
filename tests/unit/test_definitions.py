@@ -13,12 +13,12 @@ def test_all_definitions_are_consistent():
 
 
 def test_yaml_on_key_is_not_a_boolean():
-    m = config.load_yaml("definitions/mappings/trade.yml")
+    m = config.load_yaml("definitions/mappings/trade.yml", {"ac": "equities"})
     assert "on" in m["lookups"][0] and True not in m["lookups"][0]
 
 
 def test_yaml_true_false_still_booleans():
-    assert config.load_yaml("definitions/mappings/trade.yml")["source"]["exclude_quarantined"] is True
+    assert config.load_yaml("definitions/mappings/trade.yml", {"ac": "equities"})["source"]["exclude_quarantined"] is True
 
 
 def test_rule_columns_reads_sql_expressions():
@@ -57,7 +57,7 @@ def test_validator_catches_unknown_lookup_table(broken_copy):
 
 
 def test_validator_catches_gold_join_to_unknown_table(broken_copy):
-    _edit(broken_copy / "definitions/gold_products/trade_analytics.yml", "edap.silver.account", "edap.silver.accountz")
+    _edit(broken_copy / "definitions/gold_products/trade_analytics.yml", "edap.silver.common_account", "edap.silver.common_accountz")
     assert any("accountz" in e for e in validate()[0])
 
 

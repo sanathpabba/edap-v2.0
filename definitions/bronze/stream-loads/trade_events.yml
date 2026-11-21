@@ -14,7 +14,7 @@ input:
 target:
   catalog: edap
   schema: bronze
-  table: stream_trade_events
+  table: ${ac}_stream_trade_events
   mode: append
   partition_by: [_ingest_date]
 business_key: [event_id]
@@ -46,6 +46,9 @@ audit_columns:
   _ingest_ts: current_timestamp
   _ingest_date: current_date
   _source_file: file_path
+scope:                              # which rows this pipeline keeps
+  by: instrument                  # route by the instrument's asset class (Common bronze instrument master + sec_types of the pipeline)
+  column: instrument_id
 lineage:
   landing_batch: path            # landing batch_id read from the landing folder name (batch_id=...)
   row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
@@ -54,7 +57,7 @@ governance:                         # applied as Unity Catalog comment and tags 
   description: "Raw trade lifecycle events from Event Hubs, raw payload plus permissive parse"
   owner: trading-data-owner
   sensitivity: synthetic
-checkpoint: {container: bronze, path: _checkpoints/stream_trade_events}
+checkpoint: {container: bronze, path: _checkpoints/${ac}_stream_trade_events}
 dq:
   rules_file: definitions/dq_rules/bronze/stream_trade_events.yml
   mode: later

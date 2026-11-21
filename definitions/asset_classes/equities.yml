@@ -1,0 +1,11 @@
+# Asset-class pipeline definition. The pipeline code under pipelines/Equities/ is generic; this file says what it covers.
+name: Equities
+folder: Equities
+prefix: equities                       # used in table names: edap.<layer>.equities_<table>
+sec_types: [EQUITY, DERIVATIVE]                  # source security types routed to this asset class (reference: instrument_classification)
+receives_unresolved: true          # rows whose instrument is unknown to every asset class land here so DQ can quarantine them
+description: "Listed equities and equity derivatives (options on equities)"
+items:                           # what each layer processes, in order
+  bronze: [sql-loads/trades, file-loads/positions, stream-loads/trade_events]
+  silver: [instrument, trade, position, trade_event]
+  gold: [trade_analytics, position_exposure, pnl_finance, regulatory_reporting]

@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: bronze.sql_accounts
+rule_set: bronze.${ac}_sql_accounts
 layer: bronze
-target_table: edap.bronze.sql_accounts
+target_table: edap.bronze.${ac}_sql_accounts
 mode: quarantine
 description: Technical checks on raw account rows
 checks:

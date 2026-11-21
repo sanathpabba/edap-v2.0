@@ -1,7 +1,7 @@
 version: 1
 product: trade_analytics
 layer: gold
-target: {catalog: edap, schema: gold, table: trade_analytics}
+target: {catalog: edap, schema: gold, table: ${ac}_trade_analytics}
 documentation:
   business_purpose: Reusable trade-level analytics base for volumes, notionals, costs, lifecycle and settlement analysis
   grain: one row per trade (latest version)
@@ -12,13 +12,13 @@ documentation:
   dq_expectations: trade_id unique; USD amounts resolved; net amount reconciles to gross +/- costs
   refresh_pattern: full rebuild after each Silver trade load (daily)
   intended_consumers: [Trading desk dashboard, Risk analytics, Finance, Regulatory reporting]
-from: {table: edap.silver.trade, alias: t}
+from: {table: edap.silver.${ac}_trade, alias: t}
 joins:
-  - {type: left, table: edap.silver.instrument, alias: i, on: "t.instrument_id = i.instrument_id"}
-  - {type: left, table: edap.silver.portfolio, alias: p, on: "t.portfolio_id = p.portfolio_id"}
-  - {type: left, table: edap.silver.counterparty, alias: c, on: "t.counterparty_id = c.counterparty_id"}
-  - {type: left, table: edap.silver.account, alias: a, on: "t.account_id = a.account_id"}
-  - {type: left, table: edap.gold.fx_rate_daily, alias: f, on: "f.rate_date = t.trade_date AND f.currency = t.currency"}
+  - {type: left, table: edap.silver.${ac}_instrument, alias: i, on: "t.instrument_id = i.instrument_id"}
+  - {type: left, table: edap.silver.common_portfolio, alias: p, on: "t.portfolio_id = p.portfolio_id"}
+  - {type: left, table: edap.silver.common_counterparty, alias: c, on: "t.counterparty_id = c.counterparty_id"}
+  - {type: left, table: edap.silver.common_account, alias: a, on: "t.account_id = a.account_id"}
+  - {type: left, table: edap.gold.common_fx_rate_daily, alias: f, on: "f.rate_date = t.trade_date AND f.currency = t.currency"}
 select:
   dimensions:
     trade_id: "t.trade_id"

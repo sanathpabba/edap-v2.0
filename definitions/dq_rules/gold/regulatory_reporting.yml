@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: gold.regulatory_reporting
+rule_set: gold.${ac}_regulatory_reporting
 layer: gold
-target_table: edap.gold.regulatory_reporting
+target_table: edap.gold.${ac}_regulatory_reporting
 mode: flag
 description: 'Gold expectations: controlled-report integrity'
 checks:

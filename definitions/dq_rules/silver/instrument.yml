@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: silver.instrument
+rule_set: silver.${ac}_instrument
 layer: silver
-target_table: edap.silver.instrument
+target_table: edap.silver.${ac}_instrument
 mode: quarantine
 description: Enterprise rules for Instrument
 checks:

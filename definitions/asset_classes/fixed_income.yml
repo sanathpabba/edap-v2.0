@@ -1,0 +1,11 @@
+# Asset-class pipeline definition. The pipeline code under pipelines/FixedIncome/ is generic; this file says what it covers.
+name: Fixed Income
+folder: FixedIncome
+prefix: fixed_income                       # used in table names: edap.<layer>.fixed_income_<table>
+sec_types: [BOND]                  # source security types routed to this asset class (reference: instrument_classification)
+receives_unresolved: false          # rows whose instrument is unknown to every asset class land here so DQ can quarantine them
+description: "Government and corporate bonds"
+items:                           # what each layer processes, in order
+  bronze: [sql-loads/trades, file-loads/positions, stream-loads/trade_events]
+  silver: [instrument, trade, position, trade_event]
+  gold: [trade_analytics, position_exposure, pnl_finance, regulatory_reporting]

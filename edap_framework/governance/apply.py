@@ -19,10 +19,26 @@ def apply_ownership(spark):
     return len(o["schemas"])
 
 
+def gold_tables(product):
+    """edap.gold.<prefix>_<product> for every pipeline (asset class or Common) that builds this product."""
+    return ["edap.gold.%s_%s" % (a.prefix, product) for a in config.list_asset_classes() if product in a.items.get("gold", [])]
+
+
+def expand_grants(access):
+    """GOLD_PRODUCT grants become one TABLE grant per asset-class table."""
+    out = []
+    for g in access["grants"]:
+        if g["on"]["type"] == "GOLD_PRODUCT":
+            out += [{**g, "on": {"type": "TABLE", "name": t}} for t in gold_tables(g["on"]["name"])]
+        else:
+            out.append(g)
+    return out
+
+
 def apply_grants(spark, dry_run=False):
     a = config.load_yaml("definitions/governance/access.yml")
     stmts = []
-    for g in a["grants"]:
+    for g in expand_grants(a):
         for priv in g["privileges"]:
             stmts.append("GRANT %s ON %s %s TO `%s`" % (priv, g["on"]["type"], g["on"]["name"], g["principal"]))
     if not dry_run:
@@ -47,9 +63,9 @@ def apply_masks(spark):
 
 def lineage_report(spark):
     """Walk Unity Catalog table lineage upstream from each Gold product and store the paths (system.access.table_lineage)."""
-    cfg = config.load_yaml("definitions/governance/lineage.yml")
+    cfg = config.load_yaml("definitions/governance/lineage.yml", config.list_asset_classes()[0].variables())   # products/depth do not use ${ac}
     rows = []
-    for prod in cfg["products"]:
+    for prod in [t for p in cfg["products"] for t in gold_tables(p)]:
         frontier, seen = [prod], {prod}
         for depth in range(1, cfg["max_depth"] + 1):
             if not frontier:
@@ -69,16 +85,20 @@ def lineage_report(spark):
 
 
 def trace_record(spark, entity, key_value):
-    """Follow one canonical record back to its Bronze row, landing file/batch, DQ results and run log (uses the lineage columns)."""
-    t = config.load_yaml("definitions/governance/lineage.yml")["record_trace"][entity]
-    s = spark.table(t["silver_table"]).where(F.col(t["key"]) == key_value)
-    srow = s.collect()
-    if not srow:
-        return {"found": False}
-    r = srow[0].asDict()
-    b = spark.table(t["bronze_table"]).where(F.col("_row_hash") == r["_bronze_row_hash"])
-    runs = spark.table("edap.audit.ingestion_runs").where(F.col("batch_id").isin(r["_landing_batch_id"], r["_bronze_batch_id"], r["_silver_batch_id"]))
-    return {"found": True,
-            "silver": {k: str(v) for k, v in r.items() if k.startswith("_") or k == t["key"]},
-            "bronze_rows": [x.asDict() for x in b.select("_source_file", "_batch_id", "_landing_batch_id", "_ingest_ts", "_spec_path").collect()],
-            "pipeline_runs": [x.asDict() for x in runs.select("layer", "table_name", "status", "rows_processed", "started_ts", "run_id").collect()]}
+    """Follow one canonical record back to its Bronze row, landing file/batch, DQ results and run log (uses the lineage columns).
+    The record is looked up in every asset-class pipeline until found."""
+    for ac in config.list_asset_classes(include_common=False):
+        t = config.load_yaml("definitions/governance/lineage.yml", ac.variables())["record_trace"][entity]
+        if not spark.catalog.tableExists(t["silver_table"]):
+            continue
+        srow = spark.table(t["silver_table"]).where(F.col(t["key"]) == key_value).collect()
+        if not srow:
+            continue
+        r = srow[0].asDict()
+        b = spark.table(t["bronze_table"]).where(F.col("_row_hash") == r["_bronze_row_hash"])
+        runs = spark.table("edap.audit.ingestion_runs").where(F.col("batch_id").isin(r["_landing_batch_id"], r["_bronze_batch_id"], r["_silver_batch_id"]))
+        return {"found": True, "asset_class": ac.name,
+                "silver": {k: str(v) for k, v in r.items() if k.startswith("_") or k == t["key"]},
+                "bronze_rows": [x.asDict() for x in b.select("_source_file", "_batch_id", "_landing_batch_id", "_ingest_ts", "_spec_path").collect()],
+                "pipeline_runs": [x.asDict() for x in runs.select("layer", "table_name", "status", "rows_processed", "started_ts", "run_id").collect()]}
+    return {"found": False}

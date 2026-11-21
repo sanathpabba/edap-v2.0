@@ -18,18 +18,49 @@ _StrictBoolLoader.yaml_implicit_resolvers = {
 _StrictBoolLoader.add_implicit_resolver("tag:yaml.org,2002:bool", __import__("re").compile(r"^(?:true|false)$"), list("tf"))
 
 
-def load_yaml(rel_path):
+def load_yaml(rel_path, variables=None):
+    """Load a YAML file. `variables` ({"ac": "equities", ...}) replace ${name} in the text before parsing, so one spec
+    serves every asset class. Only the given names are replaced; other ${...} (e.g. product parameters) are left alone."""
     with open(os.path.join(_ROOT, rel_path)) as f:
-        return yaml.load(f, Loader=_StrictBoolLoader)
+        text = f.read()
+    for k, v in (variables or {}).items():
+        text = text.replace("${%s}" % k, str(v))
+    return yaml.load(text, Loader=_StrictBoolLoader)
+
+
+class AssetClass:
+    """One pipeline (an asset class, or 'Common'): name, folder, table prefix, routed security types, items per layer."""
+
+    def __init__(self, cfg):
+        self.cfg = cfg
+        self.name, self.folder, self.prefix = cfg["name"], cfg["folder"], cfg["prefix"]
+        self.sec_types, self.items = cfg.get("sec_types", []), cfg.get("items", {})
+        self.receives_unresolved = bool(cfg.get("receives_unresolved"))
+
+    def variables(self):
+        return {"ac": self.prefix, "asset_class": self.name, "sec_types": ",".join("'%s'" % t for t in self.sec_types) or "''"}
+
+
+def list_asset_classes(include_common=True):
+    d = os.path.join(_ROOT, "definitions", "asset_classes")
+    out = [AssetClass(load_yaml("definitions/asset_classes/%s" % f)) for f in sorted(os.listdir(d)) if f.endswith(".yml")]
+    return [a for a in out if include_common or a.prefix != "common"]
+
+
+def get_asset_class(folder_or_prefix):
+    for a in list_asset_classes():
+        if folder_or_prefix in (a.folder, a.prefix, a.name):
+            return a
+    raise KeyError("unknown asset class %s" % folder_or_prefix)
 
 
 def load_env(name=None):
     return load_yaml("definitions/environments/%s.yml" % (name or os.environ.get("EDAP_ENV", "dev")))
 
 
-def load_spec(layer, source_folder, table):
+def load_spec(layer, source_folder, table, variables=None):
     """definitions/<layer>/<source_folder>/<table>.yml  e.g. ('bronze', 'sql-loads', 'trades')"""
-    return load_yaml("definitions/%s/%s/%s.yml" % (layer, source_folder, table))
+    return load_yaml("definitions/%s/%s/%s.yml" % (layer, source_folder, table), variables)
 
 
 def list_tables(layer, source_folder):

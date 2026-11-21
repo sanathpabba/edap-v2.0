@@ -1,5 +1,5 @@
 # Landing spec: extract reference.accounts from Azure SQL and write Parquet files into ADLS landing.
-# Processed on its own (runners/landing_sql.py --table accounts); no other source or table is touched.
+# Run by pipelines/Common/landing (step files 01-08), item <this file>.
 version: 1
 layer: landing
 source_system: AZURE_SQL_TRADING

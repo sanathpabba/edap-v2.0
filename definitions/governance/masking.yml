@@ -2,7 +2,7 @@
 masks:
   - name: mask_lei
     schema: edap.governance
-    table: edap.silver.counterparty
+    table: edap.silver.common_counterparty
     column: legal_entity_identifier
     allowed_groups: [edap_data_engineers, edap_risk_regulatory]
     function_sql: "CASE WHEN {allowed} THEN lei ELSE concat(substr(lei, 1, 4), '****************') END"

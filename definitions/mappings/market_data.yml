@@ -3,10 +3,10 @@ version: 1
 entity: market_data
 layer: silver
 depends_on: [reference]
-target: {catalog: edap, schema: silver, table: market_data}
+target: {catalog: edap, schema: silver, table: ${ac}_market_data}
 business_key: [rate_date, base_currency, quote_currency]
 source:
-  bronze_table: edap.bronze.api_fx_rates
+  bronze_table: edap.bronze.${ac}_api_fx_rates
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
   transform: fx_flatten              # registered transform: explodes history/daily FX envelopes into one row per date and currency
 governance:

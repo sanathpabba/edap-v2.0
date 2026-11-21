@@ -3,10 +3,10 @@ version: 1
 entity: trade
 layer: silver
 depends_on: [instrument, portfolio, counterparty, account]
-target: {catalog: edap, schema: silver, table: trade}
+target: {catalog: edap, schema: silver, table: ${ac}_trade}
 business_key: [trade_id]
 source:
-  bronze_table: edap.bronze.sql_trades
+  bronze_table: edap.bronze.${ac}_sql_trades
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
 
 governance:
@@ -38,11 +38,11 @@ columns:
   source_updated_ts: "last_updated_ts"
 lookups:
   - {table: edap.reference.trade_status, active_only: true, on: {status_src: code}, add: {trade_status: canonical_status}}
-  - {table: edap.silver.instrument, on: {instrument_id: instrument_id}, flag: _ref_instrument_ok}
-  - {table: edap.silver.portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
-  - {table: edap.silver.counterparty, on: {counterparty_id: counterparty_id}, flag: _ref_counterparty_ok}
-  - {table: edap.silver.account, on: {account_id: account_id}, flag: _ref_account_ok}
-  - {table: edap.silver.account, on: {account_id: account_id, portfolio_id: portfolio_id}, flag: _ref_account_portfolio_ok}
+  - {table: edap.silver.${ac}_instrument, on: {instrument_id: instrument_id}, flag: _ref_instrument_ok}
+  - {table: edap.silver.common_portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
+  - {table: edap.silver.common_counterparty, on: {counterparty_id: counterparty_id}, flag: _ref_counterparty_ok}
+  - {table: edap.silver.common_account, on: {account_id: account_id}, flag: _ref_account_ok}
+  - {table: edap.silver.common_account, on: {account_id: account_id, portfolio_id: portfolio_id}, flag: _ref_account_portfolio_ok}
 dedup:
   partition_by: [trade_id]
   order_by: ["source_updated_ts DESC", "trade_version DESC", "_ingest_ts DESC"]

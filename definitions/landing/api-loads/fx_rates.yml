@@ -1,5 +1,5 @@
 # Landing spec: FX reference rates from the REST API into landing as raw JSON envelopes.
-# Processed alone: runners/landing_api.py --mode history|daily
+# Run by pipelines/Common/landing (step files 01-08), item <this file>.
 version: 1
 layer: landing
 source_system: FX_REST_API

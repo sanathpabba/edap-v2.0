@@ -1,15 +1,17 @@
 # Landing and Bronze (design as built, not yet run)
 
+> Updated: layout, naming and execution are now per asset class; see [pipelines.md](pipelines.md). The table below shows the source-level view.
+
 Each source system is processed on its own: its own definitions folder, its own runner, its own tables.
 
 | Source | Landing spec | Bronze spec | Landing runner | Landing result (ADLS `landing`) | Bronze table |
 |---|---|---|---|---|---|
-| Azure SQL (5 tables) | `definitions/landing/sql-loads/<table>.yml` | `definitions/bronze/sql-loads/<table>.yml` | `runners/landing_sql.py` | `sql/<table>/ingest_date=../batch_id=../*.parquet` | `edap.bronze.sql_<table>` |
-| Position files | `.../file-loads/positions.yml` | `.../file-loads/positions.yml` | `runners/landing_files.py` | `positions/inbound/*.csv` (registered in `edap.audit.file_arrivals`) | `edap.bronze.file_positions` |
-| Trade events | `.../stream-loads/trade_events.yml` | `.../stream-loads/trade_events.yml` | `runners/landing_stream.py` | `events/trade_events/ingest_date=../*.json` | `edap.bronze.stream_trade_events` |
-| FX REST API | `.../api-loads/fx_rates.yml` | `.../api-loads/fx_rates.yml` | `runners/landing_api.py` | `fx_rates/inbound/*.json` | `edap.bronze.api_fx_rates` |
+| Azure SQL (5 tables) | `definitions/landing/sql-loads/<table>.yml` | `definitions/bronze/sql-loads/<table>.yml` | Common/landing steps | `sql/<table>/ingest_date=../batch_id=../*.parquet` | `edap.bronze.sql_<table>` |
+| Position files | `.../file-loads/positions.yml` | `.../file-loads/positions.yml` | Common/landing steps | `positions/inbound/*.csv` (registered in `edap.audit.file_arrivals`) | `edap.bronze.file_positions` |
+| Trade events | `.../stream-loads/trade_events.yml` | `.../stream-loads/trade_events.yml` | Common/landing steps | `events/trade_events/ingest_date=../*.json` | `edap.bronze.stream_trade_events` |
+| FX REST API | `.../api-loads/fx_rates.yml` | `.../api-loads/fx_rates.yml` | Common/landing steps | `fx_rates/inbound/*.json` | `edap.bronze.api_fx_rates` |
 
-Bronze for all sources: `runners/bronze_load.py --source <folder> [--table <t>]`.
+Bronze: `python pipelines/run.py --asset-class <X> --layer bronze --mode Routine` (see pipelines.md; table names are now `edap.bronze.<prefix>_<source>_<table>`).
 
 ## Rules
 - **Landing** = raw files exactly as the source gave them. SQL extracts are full on the first run, watermark deltas after; the

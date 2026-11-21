@@ -3,10 +3,11 @@ version: 1
 entity: instrument
 layer: silver
 depends_on: [reference]
-target: {catalog: edap, schema: silver, table: instrument}
+target: {catalog: edap, schema: silver, table: ${ac}_instrument}
 business_key: [instrument_id]
 source:
-  bronze_table: edap.bronze.sql_instruments
+  bronze_table: edap.bronze.common_sql_instruments
+  where: "upper(trim(sec_type)) IN (${sec_types})"   # this asset class only (instrument master is shared)
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
 
 governance:

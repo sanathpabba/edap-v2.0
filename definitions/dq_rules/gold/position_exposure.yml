@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: gold.position_exposure
+rule_set: gold.${ac}_position_exposure
 layer: gold
-target_table: edap.gold.position_exposure
+target_table: edap.gold.${ac}_position_exposure
 mode: flag
 description: 'Gold expectations: unique grain, USD values present'
 checks:

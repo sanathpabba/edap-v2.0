@@ -3,10 +3,10 @@ version: 1
 entity: account
 layer: silver
 depends_on: [portfolio]
-target: {catalog: edap, schema: silver, table: account}
+target: {catalog: edap, schema: silver, table: ${ac}_account}
 business_key: [account_id]
 source:
-  bronze_table: edap.bronze.sql_accounts
+  bronze_table: edap.bronze.${ac}_sql_accounts
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
 
 governance:
@@ -24,7 +24,7 @@ columns:
   source_created_ts: "created_ts"
   source_updated_ts: "last_updated_ts"
 lookups:
-  - {table: edap.silver.portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
+  - {table: edap.silver.common_portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
 dedup:
   partition_by: [account_id]
   order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]

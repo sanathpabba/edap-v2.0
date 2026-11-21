@@ -1,0 +1,12 @@
+# Shared pipeline: everything that is not specific to one asset class. Runs before the asset-class pipelines.
+name: Common
+folder: Common
+prefix: common
+sec_types: []
+receives_unresolved: false
+description: "Landing for all sources, the instrument master, portfolios, accounts, counterparties, FX rates and the conformed FX dimension"
+items:
+  landing: [sql-loads/instruments, sql-loads/portfolios, sql-loads/accounts, sql-loads/counterparties, sql-loads/trades, file-loads/positions, stream-loads/trade_events, api-loads/fx_rates]
+  bronze: [sql-loads/instruments, sql-loads/portfolios, sql-loads/accounts, sql-loads/counterparties, api-loads/fx_rates]
+  silver: [portfolio, counterparty, account, market_data]
+  gold: [fx_rate_daily]

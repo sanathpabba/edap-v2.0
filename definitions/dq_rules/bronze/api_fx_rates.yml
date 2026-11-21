@@ -1,9 +1,9 @@
 # DQX rule set (declarative). Edit/add checks here; no code change needed.
 # criticality: error = row quarantined, warn = row passes and the warning is recorded.
 version: 1
-rule_set: bronze.api_fx_rates
+rule_set: bronze.${ac}_api_fx_rates
 layer: bronze
-target_table: edap.bronze.api_fx_rates
+target_table: edap.bronze.${ac}_api_fx_rates
 mode: quarantine
 description: Technical checks on landed FX envelopes; stale pulls are warnings, not rejections
 checks:

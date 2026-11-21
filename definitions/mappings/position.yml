@@ -3,10 +3,10 @@ version: 1
 entity: position
 layer: silver
 depends_on: [instrument, portfolio]
-target: {catalog: edap, schema: silver, table: position}
+target: {catalog: edap, schema: silver, table: ${ac}_position}
 business_key: [position_id]
 source:
-  bronze_table: edap.bronze.file_positions
+  bronze_table: edap.bronze.${ac}_file_positions
   exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
 
 governance:
@@ -25,8 +25,8 @@ columns:
   source_file_business_date: "to_date(file_business_date, 'yyyyMMdd')"
   source_file_version: "cast(file_version as int)"
 lookups:
-  - {table: edap.silver.portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
-  - {table: edap.silver.instrument, on: {instrument_id: instrument_id}, flag: _ref_instrument_ok}
+  - {table: edap.silver.common_portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
+  - {table: edap.silver.${ac}_instrument, on: {instrument_id: instrument_id}, flag: _ref_instrument_ok}
 dedup:
   partition_by: [position_id]
   order_by: ["source_file_version DESC", "_ingest_ts DESC"]

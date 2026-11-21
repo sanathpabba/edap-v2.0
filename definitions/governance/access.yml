@@ -10,20 +10,21 @@ grants:
   - {principal: edap_data_engineers, privileges: ["ALL PRIVILEGES"], on: {type: CATALOG, name: edap}}
   - {principal: edap_analysts, privileges: ["USE CATALOG"], on: {type: CATALOG, name: edap}}
   - {principal: edap_analysts, privileges: ["USE SCHEMA"], on: {type: SCHEMA, name: edap.gold}}
-  - {principal: edap_analysts, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.trade_analytics}}
-  - {principal: edap_analysts, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.position_exposure}}
-  - {principal: edap_analysts, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.fx_rate_daily}}
+  - {principal: edap_analysts, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: trade_analytics}}
+  - {principal: edap_analysts, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: position_exposure}}
+  - {principal: edap_analysts, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: fx_rate_daily}}
   - {principal: edap_finance, privileges: ["USE CATALOG"], on: {type: CATALOG, name: edap}}
   - {principal: edap_finance, privileges: ["USE SCHEMA"], on: {type: SCHEMA, name: edap.gold}}
-  - {principal: edap_finance, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.trade_analytics}}
-  - {principal: edap_finance, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.position_exposure}}
-  - {principal: edap_finance, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.pnl_finance}}
-  - {principal: edap_finance, privileges: ["SELECT"], on: {type: TABLE, name: edap.gold.fx_rate_daily}}
+  - {principal: edap_finance, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: trade_analytics}}
+  - {principal: edap_finance, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: position_exposure}}
+  - {principal: edap_finance, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: pnl_finance}}
+  - {principal: edap_finance, privileges: ["SELECT"], on: {type: GOLD_PRODUCT, name: fx_rate_daily}}
   - {principal: edap_risk_regulatory, privileges: ["USE CATALOG"], on: {type: CATALOG, name: edap}}
   - {principal: edap_risk_regulatory, privileges: ["USE SCHEMA", "SELECT"], on: {type: SCHEMA, name: edap.gold}}
   - {principal: edap_risk_regulatory, privileges: ["USE SCHEMA", "SELECT"], on: {type: SCHEMA, name: edap.silver}}
+# GOLD_PRODUCT grants are expanded over every asset-class pipeline: edap.gold.<prefix>_<product>  (fx_rate_daily lives in Common)
 denied_access_demo:
   description: "An analyst querying gold.regulatory_reporting must be refused (no grant)"
   as_group: edap_analysts
-  query: "SELECT * FROM edap.gold.regulatory_reporting LIMIT 5"
+  query: "SELECT * FROM edap.gold.equities_regulatory_reporting LIMIT 5"
   expect: PERMISSION_DENIED

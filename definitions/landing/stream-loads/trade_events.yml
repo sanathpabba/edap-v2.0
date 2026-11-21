@@ -1,4 +1,4 @@
-# Landing spec: Event Hubs -> raw JSON files in landing (replayable). Processed alone: runners/landing_stream.py
+# Landing spec: Event Hubs -> raw JSON files in landing (replayable). Run by pipelines/Common/landing (step files 01-08), item <this file>.
 version: 1
 layer: landing
 source_system: TRADING_EVENTS

@@ -1,5 +1,5 @@
 # Landing spec: daily position extract. The source system drops CSV files into landing/positions/inbound;
-# the landing step only registers arrival (no content change). Processed alone: runners/landing_files.py
+# the landing step only registers arrival (no content change). Run by pipelines/Common/landing (step files 01-08), item <this file>.
 version: 1
 layer: landing
 source_system: PORTFOLIO_SYS_FILES

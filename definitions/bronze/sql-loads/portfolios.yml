@@ -1,5 +1,5 @@
 # Bronze spec: raw, append-only copy of reference.portfolios (no cleansing, no dedup - that is Silver's job).
-# Processed on its own (runners/bronze_load.py --source sql-loads --table portfolios).
+# Run by pipelines/<AssetClass or Common>/bronze (step files 01-10); table name is prefixed with the pipeline (${ac}_).
 version: 1
 layer: bronze
 source_system: AZURE_SQL_TRADING
@@ -14,7 +14,7 @@ input:
 target:
   catalog: edap
   schema: bronze
-  table: sql_portfolios
+  table: ${ac}_sql_portfolios
   mode: append
   partition_by: [_ingest_date]
   properties:
@@ -36,6 +36,8 @@ audit_columns:                       # added by the framework, identical for eve
   _ingest_ts: current_timestamp
   _ingest_date: current_date
   _source_file: file_path
+scope:                              # which rows this pipeline keeps
+  by: none
 lineage:
   landing_batch: path            # landing batch_id read from the landing folder name (batch_id=...)
   row_hash: sha256                  # _row_hash over the source columns; detects changed/replayed rows without comparing every column
@@ -46,7 +48,7 @@ governance:                         # applied as Unity Catalog comment and tags 
   sensitivity: synthetic
 checkpoint:
   container: bronze
-  path: _checkpoints/sql_portfolios
+  path: _checkpoints/${ac}_sql_portfolios
 dq:
   rules_file: definitions/dq_rules/bronze/sql_portfolios.yml   # authored in the DQ phase
   mode: later
