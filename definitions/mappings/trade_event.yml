@@ -1,0 +1,39 @@
+# Canonical mapping: Bronze (stream_trade_events) -> Silver trade_event. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: trade_event
+layer: silver
+depends_on: [trade]
+target: {catalog: edap, schema: silver, table: trade_event}
+business_key: [event_id]
+source:
+  bronze_table: edap.bronze.stream_trade_events
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+
+governance:
+  description: "Canonical Trade Event; duplicates removed by event_id, malformed/unknown-trade events quarantined"
+  owner: trading-data-owner
+  sensitivity: synthetic
+columns:
+  event_id: "upper(trim(event_id))"
+  trade_id: "upper(trim(trade_id))"
+  instrument_id: "upper(trim(instrument_id))"
+  portfolio_id: "upper(trim(portfolio_id))"
+  counterparty_id: "upper(trim(counterparty_id))"
+  side: "upper(trim(trade_type))"
+  quantity: "cast(quantity as decimal(18,4))"
+  price: "cast(price as decimal(18,6))"
+  currency: "upper(trim(currency))"
+  event_type: "upper(trim(event_type))"
+  event_ts: "to_timestamp(event_timestamp)"
+  eh_partition: "eh_partition"
+  eh_offset: "eh_offset"
+  eh_enqueued_ts: "eh_enqueued_ts"
+lookups:
+  - {table: edap.silver.trade, on: {trade_id: trade_id}, flag: _ref_trade_ok}
+dedup:
+  partition_by: [event_id]
+  order_by: ["_ingest_ts DESC"]
+merge:
+  keys: [event_id]
+  update_when: ""                     # events are immutable: first copy wins, later duplicates are ignored
+dq: {rules_file: definitions/dq_rules/silver/trade_event.yml}

@@ -1,0 +1,100 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: bronze.file_positions
+layer: bronze
+target_table: edap.bronze.file_positions
+mode: quarantine
+description: Technical checks on the raw position file; covers the six injected defect types except unknown_instrument (a Silver referential rule)
+checks:
+- name: position_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: position_id
+- name: position_id_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: position_id
+      regex: ^POS-\d{8}-\d{4}$
+- name: position_id_unique_in_file
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - position_id
+- name: portfolio_ref_not_null
+  criticality: missing_portfolio
+  check:
+    function: is_not_null
+    arguments:
+      column: portfolio_ref
+- name: portfolio_ref_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: portfolio_ref
+      regex: ^PORT\d{4}$
+- name: instrument_code_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: instrument_code
+      regex: ^INST\d{5}$
+- name: quantity_numeric
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: try_cast(position_qty AS DOUBLE) IS NOT NULL
+      msg: position_qty is not numeric
+- name: avg_cost_numeric
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: try_cast(avg_cost AS DOUBLE) IS NOT NULL
+      msg: avg_cost is not numeric
+- name: market_value_numeric
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: try_cast(market_value AS DOUBLE) IS NOT NULL
+      msg: market_value is not numeric
+- name: invalid_currency
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: ccy
+      allowed:
+      - '''USD'''
+      - '''EUR'''
+      - '''GBP'''
+      - '''JPY'''
+      - '''CHF'''
+      - '''AUD'''
+      - '''CAD'''
+      - '''SGD'''
+      - '''HKD'''
+- name: position_date_valid
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: try_to_date(position_date, 'yyyy-MM-dd') IS NOT NULL
+      msg: position_date is not a valid yyyy-MM-dd date
+- name: position_date_matches_file
+  criticality: warn
+  check:
+    function: sql_expression
+    arguments:
+      expression: position_date = concat_ws('-', substr(file_business_date,1,4), substr(file_business_date,5,2), substr(file_business_date,7,2))
+      msg: position_date differs from the file's business date

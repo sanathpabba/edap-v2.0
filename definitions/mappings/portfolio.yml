@@ -1,0 +1,32 @@
+# Canonical mapping: Bronze (sql_portfolios) -> Silver portfolio. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: portfolio
+layer: silver
+depends_on: [reference]
+target: {catalog: edap, schema: silver, table: portfolio}
+business_key: [portfolio_id]
+source:
+  bronze_table: edap.bronze.sql_portfolios
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+
+governance:
+  description: "Canonical Portfolio (book), one row per portfolio"
+  owner: trading-data-owner
+  sensitivity: synthetic
+columns:
+  portfolio_id: "upper(trim(book_cd))"
+  portfolio_name: "trim(book_name)"
+  business_unit: "trim(business_unit)"
+  base_currency: "upper(trim(base_ccy))"
+  region: "upper(trim(region))"
+  is_active: "is_active"
+  source_created_ts: "created_ts"
+  source_updated_ts: "last_updated_ts"
+lookups: []
+dedup:
+  partition_by: [portfolio_id]
+  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+merge:
+  keys: [portfolio_id]
+  update_when: "s.source_updated_ts >= t.source_updated_ts"
+dq: {rules_file: definitions/dq_rules/silver/portfolio.yml}

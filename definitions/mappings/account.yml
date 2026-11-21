@@ -1,0 +1,34 @@
+# Canonical mapping: Bronze (sql_accounts) -> Silver account. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: account
+layer: silver
+depends_on: [portfolio]
+target: {catalog: edap, schema: silver, table: account}
+business_key: [account_id]
+source:
+  bronze_table: edap.bronze.sql_accounts
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+
+governance:
+  description: "Canonical Account, always tied to a valid Portfolio"
+  owner: trading-data-owner
+  sensitivity: synthetic
+columns:
+  account_id: "upper(trim(acct_ref))"
+  account_name: "trim(acct_name)"
+  account_type: "upper(trim(acct_type))"
+  currency: "upper(trim(ccy))"
+  portfolio_id: "upper(trim(book_cd))"
+  custodian: "custodian"
+  is_active: "is_active"
+  source_created_ts: "created_ts"
+  source_updated_ts: "last_updated_ts"
+lookups:
+  - {table: edap.silver.portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
+dedup:
+  partition_by: [account_id]
+  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+merge:
+  keys: [account_id]
+  update_when: "s.source_updated_ts >= t.source_updated_ts"
+dq: {rules_file: definitions/dq_rules/silver/account.yml}

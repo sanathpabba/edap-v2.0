@@ -1,0 +1,39 @@
+# Canonical mapping: Bronze (sql_instruments) -> Silver instrument. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: instrument
+layer: silver
+depends_on: [reference]
+target: {catalog: edap, schema: silver, table: instrument}
+business_key: [instrument_id]
+source:
+  bronze_table: edap.bronze.sql_instruments
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+
+governance:
+  description: "Canonical Instrument (one row per instrument), standardised ids, asset class from reference data"
+  owner: trading-data-owner
+  sensitivity: synthetic
+columns:
+  instrument_id: "upper(trim(sec_code))"
+  instrument_name: "trim(sec_name)"
+  instrument_type: "upper(trim(sec_type))"
+  currency: "upper(trim(ccy))"
+  exchange: "trim(exchange)"
+  ticker: "trim(ticker)"
+  isin: "trim(isin)"
+  sector: "sector"
+  country_code: "upper(trim(country))"
+  contract_size: "contract_size"
+  is_active: "is_active"
+  source_created_ts: "created_ts"
+  source_updated_ts: "last_updated_ts"
+lookups:
+  - {table: edap.reference.instrument_classification, active_only: true, on: {instrument_type: code}, add: {asset_class: asset_class, reporting_group: reporting_group}}
+  - {table: edap.reference.country_region, active_only: true, on: {country_code: code}, add: {region: region}}
+dedup:
+  partition_by: [instrument_id]
+  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+merge:
+  keys: [instrument_id]
+  update_when: "s.source_updated_ts >= t.source_updated_ts"
+dq: {rules_file: definitions/dq_rules/silver/instrument.yml}

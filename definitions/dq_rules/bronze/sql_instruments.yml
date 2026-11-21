@@ -1,0 +1,61 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: bronze.sql_instruments
+layer: bronze
+target_table: edap.bronze.sql_instruments
+mode: quarantine
+description: Technical checks on raw instrument rows
+checks:
+- name: sec_code_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: sec_code
+- name: sec_code_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: sec_code
+      regex: ^INST\d{5}$
+- name: sec_code_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - sec_code
+- name: sec_type_allowed
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: sec_type
+      allowed:
+      - '''EQUITY'''
+      - '''BOND'''
+      - '''FX'''
+      - '''COMMODITY'''
+      - '''DERIVATIVE'''
+- name: ccy_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: ccy
+      regex: ^[A-Z]{3}$
+- name: contract_size_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: contract_size > 0
+      msg: contract_size must be > 0
+- name: last_updated_ts_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: last_updated_ts

@@ -1,0 +1,13 @@
+reference: trade_status
+version: 1
+owner: trading-data-owner
+source: Trading operations status model
+description: Maps source trade status codes to the canonical lifecycle status
+effective_from: "2024-01-01"
+columns: {code: string, canonical_status: string, description: string, is_terminal: boolean, lifecycle_order: int}
+rows:
+  - {code: NEW, canonical_status: NEW, description: Order captured, not yet executed, is_terminal: false, lifecycle_order: 1}
+  - {code: EXECUTED, canonical_status: EXECUTED, description: Executed, awaiting settlement, is_terminal: false, lifecycle_order: 2}
+  - {code: SETTLED, canonical_status: SETTLED, description: Settled, is_terminal: true, lifecycle_order: 3}
+  - {code: CANCELLED, canonical_status: CANCELLED, description: Cancelled before settlement, is_terminal: true, lifecycle_order: 3}
+  - {code: FAILED, canonical_status: FAILED, description: Settlement failed, is_terminal: true, lifecycle_order: 3}

@@ -9,9 +9,18 @@ def project_root():
     return _ROOT
 
 
+class _StrictBoolLoader(yaml.SafeLoader):
+    """YAML 1.1 reads on/off/yes/no as booleans, which turns a key like `on:` into True. Only true/false are booleans here."""
+
+
+_StrictBoolLoader.yaml_implicit_resolvers = {
+    k: [(tag, rx) for tag, rx in v if tag != "tag:yaml.org,2002:bool"] for k, v in yaml.SafeLoader.yaml_implicit_resolvers.items()}
+_StrictBoolLoader.add_implicit_resolver("tag:yaml.org,2002:bool", __import__("re").compile(r"^(?:true|false)$"), list("tf"))
+
+
 def load_yaml(rel_path):
     with open(os.path.join(_ROOT, rel_path)) as f:
-        return yaml.safe_load(f)
+        return yaml.load(f, Loader=_StrictBoolLoader)
 
 
 def load_env(name=None):

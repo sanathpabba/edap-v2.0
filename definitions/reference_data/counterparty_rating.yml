@@ -1,0 +1,13 @@
+reference: counterparty_rating
+version: 1
+owner: risk-data-owner
+source: EDAP credit policy
+description: Credit rating to rating grade used by regulatory and risk reporting
+effective_from: "2024-01-01"
+columns: {code: string, rating_grade: string, investment_grade: boolean, rank: int}
+rows:
+  - {code: AAA, rating_grade: Prime, investment_grade: true, rank: 1}
+  - {code: AA, rating_grade: High, investment_grade: true, rank: 2}
+  - {code: A, rating_grade: Upper Medium, investment_grade: true, rank: 3}
+  - {code: BBB, rating_grade: Lower Medium, investment_grade: true, rank: 4}
+  - {code: BB, rating_grade: Speculative, investment_grade: false, rank: 5}

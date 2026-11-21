@@ -1,0 +1,38 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: silver.counterparty
+layer: silver
+target_table: edap.silver.counterparty
+mode: quarantine
+description: Enterprise rules for Counterparty
+checks:
+- name: counterparty_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: counterparty_id
+- name: counterparty_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - counterparty_id
+- name: risk_category_allowed
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: risk_category
+      allowed:
+      - '''LOW'''
+      - '''MEDIUM'''
+      - '''HIGH'''
+- name: legal_entity_identifier_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: legal_entity_identifier

@@ -1,0 +1,31 @@
+# Canonical mapping: Bronze (api_fx_rates) -> Silver market_data. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: market_data
+layer: silver
+depends_on: [reference]
+target: {catalog: edap, schema: silver, table: market_data}
+business_key: [rate_date, base_currency, quote_currency]
+source:
+  bronze_table: edap.bronze.api_fx_rates
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+  transform: fx_flatten              # registered transform: explodes history/daily FX envelopes into one row per date and currency
+governance:
+  description: "Canonical Market Data (FX rates quoted per 1 USD, with usd_per_unit); non-stale pull wins over stale"
+  owner: market-data-owner
+  sensitivity: synthetic
+columns:
+  rate_date: "to_date(rate_date)"
+  base_currency: "upper(base_currency)"
+  quote_currency: "upper(quote_currency)"
+  rate: "cast(rate as decimal(18,8))"
+  usd_per_unit: "cast(1.0 / rate as decimal(18,8))"
+  is_stale_pull: "coalesce(stale, false)"
+  fetched_at_utc: "to_timestamp(fetched_at_utc)"
+lookups: []
+dedup:
+  partition_by: [rate_date, base_currency, quote_currency]
+  order_by: ["is_stale_pull ASC", "fetched_at_utc DESC", "_ingest_ts DESC"]
+merge:
+  keys: [rate_date, base_currency, quote_currency]
+  update_when: "s.is_stale_pull = false OR t.is_stale_pull = true"
+dq: {rules_file: definitions/dq_rules/silver/market_data.yml}

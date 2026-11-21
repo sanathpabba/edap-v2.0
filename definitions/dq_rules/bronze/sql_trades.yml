@@ -1,0 +1,84 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: bronze.sql_trades
+layer: bronze
+target_table: edap.bronze.sql_trades
+mode: quarantine
+description: Technical checks on raw trade rows (one row per trade per batch)
+checks:
+- name: trade_no_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: trade_no
+- name: trade_no_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: trade_no
+      regex: ^TRD\d{7}$
+- name: trade_no_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - trade_no
+- name: side_allowed
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: side
+      allowed:
+      - '''BUY'''
+      - '''SELL'''
+- name: qty_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: qty > 0
+      msg: qty must be > 0
+- name: price_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: price > 0
+      msg: price must be > 0
+- name: trade_status_allowed
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: trade_status
+      allowed:
+      - '''NEW'''
+      - '''EXECUTED'''
+      - '''SETTLED'''
+      - '''CANCELLED'''
+      - '''FAILED'''
+- name: trade_ccy_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: trade_ccy
+      regex: ^[A-Z]{3}$
+- name: settle_not_before_trade
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: settle_dt >= trade_dt
+      msg: settlement date before trade date
+- name: last_updated_ts_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: last_updated_ts

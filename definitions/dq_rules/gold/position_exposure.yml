@@ -1,0 +1,32 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: gold.position_exposure
+layer: gold
+target_table: edap.gold.position_exposure
+mode: flag
+description: 'Gold expectations: unique grain, USD values present'
+checks:
+- name: position_date_portfolio_id_instrument_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - position_date
+      - portfolio_id
+      - instrument_id
+- name: usd_value_resolved
+  criticality: warn
+  check:
+    function: sql_expression
+    arguments:
+      expression: market_value_usd IS NOT NULL
+      msg: FX rate missing, USD value not computed
+- name: weight_bounded
+  criticality: warn
+  check:
+    function: sql_expression
+    arguments:
+      expression: abs(portfolio_weight) <= 1.0
+      msg: exposure weight outside [-1, 1]

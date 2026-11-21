@@ -1,0 +1,17 @@
+reference: currency
+version: 1
+owner: reference-data-owner
+source: ISO 4217 (subset approved for EDAP)
+description: Approved trading currencies; Silver validates every currency column against this list
+effective_from: "2024-01-01"
+columns: {code: string, description: string, minor_units: int, is_base: boolean}
+rows:
+  - {code: USD, description: US Dollar, minor_units: 2, is_base: true}
+  - {code: EUR, description: Euro, minor_units: 2, is_base: false}
+  - {code: GBP, description: Pound Sterling, minor_units: 2, is_base: false}
+  - {code: JPY, description: Japanese Yen, minor_units: 0, is_base: false}
+  - {code: CHF, description: Swiss Franc, minor_units: 2, is_base: false}
+  - {code: AUD, description: Australian Dollar, minor_units: 2, is_base: false}
+  - {code: CAD, description: Canadian Dollar, minor_units: 2, is_base: false}
+  - {code: SGD, description: Singapore Dollar, minor_units: 2, is_base: false}
+  - {code: HKD, description: Hong Kong Dollar, minor_units: 2, is_base: false}

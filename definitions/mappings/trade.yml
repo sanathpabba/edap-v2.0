@@ -1,0 +1,52 @@
+# Canonical mapping: Bronze (sql_trades) -> Silver trade. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: trade
+layer: silver
+depends_on: [instrument, portfolio, counterparty, account]
+target: {catalog: edap, schema: silver, table: trade}
+business_key: [trade_id]
+source:
+  bronze_table: edap.bronze.sql_trades
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+
+governance:
+  description: "Canonical Trade (system of record: SQL); latest version per trade_id, status from reference data"
+  owner: trading-data-owner
+  sensitivity: synthetic
+columns:
+  trade_id: "upper(trim(trade_no))"
+  trade_date: "trade_dt"
+  trade_ts: "trade_ts"
+  settlement_date: "settle_dt"
+  instrument_id: "upper(trim(sec_code))"
+  portfolio_id: "upper(trim(book_cd))"
+  counterparty_id: "upper(trim(cpty_code))"
+  account_id: "upper(trim(acct_ref))"
+  side: "upper(trim(side))"
+  quantity: "qty"
+  price: "price"
+  currency: "upper(trim(trade_ccy))"
+  gross_amount: "gross_amt"
+  commission: "commission"
+  fees: "fees"
+  net_amount: "net_amt"
+  status_src: "upper(trim(trade_status))"
+  trade_version: "version"
+  trader: "trader"
+  strategy: "strategy"
+  source_created_ts: "created_ts"
+  source_updated_ts: "last_updated_ts"
+lookups:
+  - {table: edap.reference.trade_status, active_only: true, on: {status_src: code}, add: {trade_status: canonical_status}}
+  - {table: edap.silver.instrument, on: {instrument_id: instrument_id}, flag: _ref_instrument_ok}
+  - {table: edap.silver.portfolio, on: {portfolio_id: portfolio_id}, flag: _ref_portfolio_ok}
+  - {table: edap.silver.counterparty, on: {counterparty_id: counterparty_id}, flag: _ref_counterparty_ok}
+  - {table: edap.silver.account, on: {account_id: account_id}, flag: _ref_account_ok}
+  - {table: edap.silver.account, on: {account_id: account_id, portfolio_id: portfolio_id}, flag: _ref_account_portfolio_ok}
+dedup:
+  partition_by: [trade_id]
+  order_by: ["source_updated_ts DESC", "trade_version DESC", "_ingest_ts DESC"]
+merge:
+  keys: [trade_id]
+  update_when: "s.source_updated_ts >= t.source_updated_ts"      # a late, older version never overwrites a newer one
+dq: {rules_file: definitions/dq_rules/silver/trade.yml}

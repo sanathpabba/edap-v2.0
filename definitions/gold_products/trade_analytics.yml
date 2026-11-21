@@ -1,0 +1,68 @@
+version: 1
+product: trade_analytics
+layer: gold
+target: {catalog: edap, schema: gold, table: trade_analytics}
+documentation:
+  business_purpose: Reusable trade-level analytics base for volumes, notionals, costs, lifecycle and settlement analysis
+  grain: one row per trade (latest version)
+  source_entities: [trade, instrument, portfolio, counterparty, account, market_data]
+  major_measures: [quantity, gross_amount, net_amount, gross_amount_usd, net_amount_usd, commission_fees_usd, days_to_settle]
+  major_dimensions: [trade_date, side, trade_status, asset_class, portfolio, business_unit, counterparty, strategy, currency]
+  owner: trading-data-owner
+  dq_expectations: trade_id unique; USD amounts resolved; net amount reconciles to gross +/- costs
+  refresh_pattern: full rebuild after each Silver trade load (daily)
+  intended_consumers: [Trading desk dashboard, Risk analytics, Finance, Regulatory reporting]
+from: {table: edap.silver.trade, alias: t}
+joins:
+  - {type: left, table: edap.silver.instrument, alias: i, on: "t.instrument_id = i.instrument_id"}
+  - {type: left, table: edap.silver.portfolio, alias: p, on: "t.portfolio_id = p.portfolio_id"}
+  - {type: left, table: edap.silver.counterparty, alias: c, on: "t.counterparty_id = c.counterparty_id"}
+  - {type: left, table: edap.silver.account, alias: a, on: "t.account_id = a.account_id"}
+  - {type: left, table: edap.gold.fx_rate_daily, alias: f, on: "f.rate_date = t.trade_date AND f.currency = t.currency"}
+select:
+  dimensions:
+    trade_id: "t.trade_id"
+    trade_date: "t.trade_date"
+    trade_ts: "t.trade_ts"
+    settlement_date: "t.settlement_date"
+    side: "t.side"
+    trade_status: "t.trade_status"
+    strategy: "t.strategy"
+    trader: "t.trader"
+    currency: "t.currency"
+    instrument_id: "t.instrument_id"
+    instrument_name: "i.instrument_name"
+    asset_class: "i.asset_class"
+    instrument_type: "i.instrument_type"
+    exchange: "i.exchange"
+    portfolio_id: "t.portfolio_id"
+    portfolio_name: "p.portfolio_name"
+    business_unit: "p.business_unit"
+    portfolio_region: "p.region"
+    counterparty_id: "t.counterparty_id"
+    counterparty_name: "c.counterparty_name"
+    risk_category: "c.risk_category"
+    credit_rating: "c.credit_rating"
+    account_id: "t.account_id"
+    account_type: "a.account_type"
+  measures:
+    quantity: "t.quantity"
+    price: "t.price"
+    gross_amount: "t.gross_amount"
+    commission: "t.commission"
+    fees: "t.fees"
+    net_amount: "t.net_amount"
+    gross_amount_usd: "round(t.gross_amount * f.usd_per_unit, 2)"
+    net_amount_usd: "round(t.net_amount * f.usd_per_unit, 2)"
+    commission_fees_usd: "round((t.commission + t.fees) * f.usd_per_unit, 2)"
+    days_to_settle: "datediff(t.settlement_date, t.trade_date)"
+    is_cancelled: "t.trade_status = 'CANCELLED'"
+    is_failed: "t.trade_status = 'FAILED'"
+    trade_version: "t.trade_version"
+    source_updated_ts: "t.source_updated_ts"
+    _silver_batch_id: "t._silver_batch_id"
+    _bronze_row_hash: "t._bronze_row_hash"
+dq: {rules_file: definitions/dq_rules/gold/trade_analytics.yml}
+column_comments:
+  gross_amount_usd: "Gross amount converted at the trade-date FX rate (gold.fx_rate_daily)"
+  days_to_settle: "Calendar days between trade date and settlement date"

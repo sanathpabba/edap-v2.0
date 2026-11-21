@@ -1,0 +1,42 @@
+version: 1
+product: regulatory_reporting
+layer: gold
+target: {catalog: edap, schema: gold, table: regulatory_reporting}
+documentation:
+  business_purpose: Controlled daily counterparty exposure and settlement-failure report with large-exposure flagging
+  grain: one row per reporting_date x counterparty
+  source_entities: [trade, counterparty, market_data]
+  major_measures: [trade_count, gross_notional_usd, failed_trades, settlement_fail_rate, large_exposure_flag]
+  major_dimensions: [reporting_date, counterparty, risk_category, credit_rating, country]
+  owner: risk-data-owner
+  sensitivity: restricted
+  dq_expectations: unique grain; non-empty rows; fail rate within [0, 1]
+  refresh_pattern: full rebuild after the Silver trade load; controlled (versioned) release
+  intended_consumers: [Regulatory reporting, Risk and compliance]
+parameters:
+  large_exposure_threshold_usd: 50000000
+  report_version: "v1"
+with:
+  - name: agg
+    sql: "SELECT t.trade_date AS reporting_date, t.counterparty_id, count(*) AS trade_count, sum(t.gross_amount * f.usd_per_unit) AS gross_notional, sum(CASE WHEN t.trade_status = 'FAILED' THEN 1 ELSE 0 END) AS failed_trades FROM edap.silver.trade t LEFT JOIN edap.gold.fx_rate_daily f ON f.rate_date = t.trade_date AND f.currency = t.currency WHERE t.trade_status <> 'CANCELLED' GROUP BY t.trade_date, t.counterparty_id"
+from: {table: agg, alias: a}
+joins:
+  - {type: left, table: edap.silver.counterparty, alias: c, on: "a.counterparty_id = c.counterparty_id"}
+select:
+  dimensions:
+    reporting_date: "a.reporting_date"
+    counterparty_id: "a.counterparty_id"
+    counterparty_name: "c.counterparty_name"
+    risk_category: "c.risk_category"
+    credit_rating: "c.credit_rating"
+    investment_grade: "c.investment_grade"
+    country_code: "c.country_code"
+  measures:
+    trade_count: "a.trade_count"
+    gross_notional_usd: "round(a.gross_notional, 2)"
+    failed_trades: "a.failed_trades"
+    settlement_fail_rate: "round(a.failed_trades / a.trade_count, 4)"
+    large_exposure_flag: "a.gross_notional >= ${large_exposure_threshold_usd}"
+    report_version: "'${report_version}'"
+    report_generated_ts: "current_timestamp()"
+dq: {rules_file: definitions/dq_rules/gold/regulatory_reporting.yml}

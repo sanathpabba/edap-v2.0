@@ -1,0 +1,129 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: silver.trade
+layer: silver
+target_table: edap.silver.trade
+mode: quarantine
+description: Enterprise rules for Trade (referential, domain, business-date)
+checks:
+- name: trade_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: trade_id
+- name: trade_id_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: trade_id
+      regex: ^TRD\d{7}$
+- name: trade_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - trade_id
+- name: instrument_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_instrument_ok
+      msg: instrument_id does not resolve to Instrument
+- name: portfolio_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_portfolio_ok
+      msg: portfolio_id does not resolve to Portfolio
+- name: counterparty_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_counterparty_ok
+      msg: counterparty_id does not resolve to Counterparty
+- name: account_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_account_ok
+      msg: account_id does not resolve to Account
+- name: account_belongs_to_portfolio
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_account_portfolio_ok
+      msg: account belongs to a different portfolio than the trade
+- name: side_allowed
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: side
+      allowed:
+      - '''BUY'''
+      - '''SELL'''
+- name: quantity_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: quantity > 0
+      msg: quantity must be > 0
+- name: price_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: price > 0
+      msg: price must be > 0
+- name: currency_approved
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: currency
+      allowed:
+      - '''USD'''
+      - '''EUR'''
+      - '''GBP'''
+      - '''JPY'''
+      - '''CHF'''
+      - '''AUD'''
+      - '''CAD'''
+      - '''SGD'''
+      - '''HKD'''
+- name: status_canonical
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: trade_status
+      allowed:
+      - '''NEW'''
+      - '''EXECUTED'''
+      - '''SETTLED'''
+      - '''CANCELLED'''
+      - '''FAILED'''
+- name: settlement_not_before_trade
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: settlement_date >= trade_date
+      msg: settlement before trade date
+- name: trade_date_not_future
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: trade_date <= current_date()
+      msg: trade date in the future

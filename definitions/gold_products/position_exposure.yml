@@ -1,0 +1,45 @@
+version: 1
+product: position_exposure
+layer: gold
+target: {catalog: edap, schema: gold, table: position_exposure}
+documentation:
+  business_purpose: Daily portfolio positions valued in a common currency (USD) with exposure weights by asset class and portfolio
+  grain: one row per position_date x portfolio x instrument
+  source_entities: [position, instrument, portfolio, market_data]
+  major_measures: [quantity, market_value, market_value_usd, cost_basis_usd, portfolio_weight]
+  major_dimensions: [position_date, portfolio, business_unit, asset_class, instrument, currency, region]
+  owner: portfolio-data-owner
+  dq_expectations: unique grain; USD value present; weights within [-1, 1]
+  refresh_pattern: full rebuild after each Silver position load (daily)
+  intended_consumers: [Risk dashboard, Portfolio managers, Regulatory reporting, Finance]
+from: {table: edap.silver.position, alias: s}
+joins:
+  - {type: left, table: edap.silver.instrument, alias: i, on: "s.instrument_id = i.instrument_id"}
+  - {type: left, table: edap.silver.portfolio, alias: p, on: "s.portfolio_id = p.portfolio_id"}
+  - {type: left, table: edap.gold.fx_rate_daily, alias: f, on: "f.rate_date = s.position_date AND f.currency = s.currency"}
+select:
+  dimensions:
+    position_date: "s.position_date"
+    portfolio_id: "s.portfolio_id"
+    portfolio_name: "p.portfolio_name"
+    business_unit: "p.business_unit"
+    region: "p.region"
+    instrument_id: "s.instrument_id"
+    instrument_name: "i.instrument_name"
+    asset_class: "i.asset_class"
+    currency: "s.currency"
+    exposure_side: "CASE WHEN s.quantity >= 0 THEN 'LONG' ELSE 'SHORT' END"
+  measures:
+    quantity: "s.quantity"
+    avg_cost: "s.avg_cost"
+    market_value: "s.market_value"
+    market_value_usd: "round(s.market_value * f.usd_per_unit, 2)"
+    cost_basis_usd: "round(s.quantity * s.avg_cost * f.usd_per_unit, 2)"
+    portfolio_weight: "round(s.market_value * f.usd_per_unit / nullif(sum(abs(s.market_value * f.usd_per_unit)) OVER (PARTITION BY s.position_date, s.portfolio_id), 0), 6)"
+    source_file_version: "s.source_file_version"
+    _silver_batch_id: "s._silver_batch_id"
+    _bronze_file: "s._bronze_file"
+dq: {rules_file: definitions/dq_rules/gold/position_exposure.yml}
+column_comments:
+  market_value_usd: "Market value converted at the position-date FX rate (gold.fx_rate_daily)"
+  portfolio_weight: "Share of the portfolio's gross USD exposure on that date; negative for short positions"

@@ -1,0 +1,44 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: silver.portfolio
+layer: silver
+target_table: edap.silver.portfolio
+mode: quarantine
+description: Enterprise rules for Portfolio
+checks:
+- name: portfolio_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: portfolio_id
+- name: portfolio_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - portfolio_id
+- name: base_currency_approved
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: base_currency
+      allowed:
+      - '''USD'''
+      - '''EUR'''
+      - '''GBP'''
+      - '''JPY'''
+      - '''CHF'''
+      - '''AUD'''
+      - '''CAD'''
+      - '''SGD'''
+      - '''HKD'''
+- name: business_unit_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: business_unit

@@ -1,0 +1,48 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: bronze.sql_portfolios
+layer: bronze
+target_table: edap.bronze.sql_portfolios
+mode: quarantine
+description: Technical checks on raw portfolio rows
+checks:
+- name: book_cd_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: book_cd
+- name: book_cd_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: book_cd
+      regex: ^PORT\d{4}$
+- name: book_cd_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - book_cd
+- name: book_name_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: book_name
+- name: base_ccy_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: base_ccy
+      regex: ^[A-Z]{3}$
+- name: last_updated_ts_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: last_updated_ts

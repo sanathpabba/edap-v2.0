@@ -1,0 +1,31 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: gold.regulatory_reporting
+layer: gold
+target_table: edap.gold.regulatory_reporting
+mode: flag
+description: 'Gold expectations: controlled-report integrity'
+checks:
+- name: reporting_date_counterparty_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - reporting_date
+      - counterparty_id
+- name: trade_count_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: trade_count > 0
+      msg: empty grain row
+- name: fail_rate_bounded
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: settlement_fail_rate BETWEEN 0 AND 1
+      msg: fail rate outside [0,1]

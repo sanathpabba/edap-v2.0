@@ -1,0 +1,71 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: silver.position
+layer: silver
+target_table: edap.silver.position
+mode: quarantine
+description: Enterprise rules for Position
+checks:
+- name: position_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: position_id
+- name: position_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - position_id
+- name: portfolio_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_portfolio_ok
+      msg: portfolio_id does not resolve to Portfolio
+- name: instrument_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_instrument_ok
+      msg: instrument_id does not resolve to Instrument
+- name: quantity_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: quantity
+- name: currency_approved
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: currency
+      allowed:
+      - '''USD'''
+      - '''EUR'''
+      - '''GBP'''
+      - '''JPY'''
+      - '''CHF'''
+      - '''AUD'''
+      - '''CAD'''
+      - '''SGD'''
+      - '''HKD'''
+- name: position_date_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: position_date
+- name: position_date_not_future
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: position_date <= current_date()
+      msg: position date in the future

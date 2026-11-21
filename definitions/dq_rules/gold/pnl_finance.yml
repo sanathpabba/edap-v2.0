@@ -1,0 +1,30 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: gold.pnl_finance
+layer: gold
+target_table: edap.gold.pnl_finance
+mode: flag
+description: 'Gold expectations: P&L arithmetic'
+checks:
+- name: position_date_portfolio_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - position_date
+      - portfolio_id
+- name: market_value_usd_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: market_value_usd
+- name: pnl_reconciles
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: abs(unrealized_pnl_usd - (market_value_usd - cost_basis_usd)) < 0.05
+      msg: P&L does not equal market value minus cost basis

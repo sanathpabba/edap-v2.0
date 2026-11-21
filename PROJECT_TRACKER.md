@@ -23,19 +23,19 @@
 | 3 | Source 3 - Streaming Trade Events | 7 | 7 | 0 | 0 | 0 | 0 |
 | 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
 | 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
-| 6 | YAML Specification & Framework Core | 6 | 0 | 1 | 0 | 0 | 5 |
+| 6 | YAML Specification & Framework Core | 6 | 0 | 2 | 0 | 0 | 4 |
 | 7 | Landing & Bronze (metadata-driven) | 8 | 0 | 5 | 0 | 0 | 3 |
-| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 0 | 0 | 0 | 6 |
-| 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 0 | 0 | 0 | 6 |
-| 10 | Gold Data Products | 6 | 0 | 0 | 0 | 0 | 6 |
+| 8 | Data Quality (DQX) - Bronze & Silver | 6 | 0 | 6 | 0 | 0 | 0 |
+| 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
+| 10 | Gold Data Products | 6 | 0 | 6 | 0 | 0 | 0 |
 | 11 | Consumption | 3 | 0 | 0 | 0 | 0 | 3 |
 | 12 | Orchestration | 4 | 0 | 0 | 0 | 0 | 4 |
 | 13 | Monitoring, Audit, Alerting & Cost | 4 | 0 | 0 | 0 | 0 | 4 |
-| 14 | Governance, Security & Lineage | 4 | 0 | 0 | 0 | 0 | 4 |
+| 14 | Governance, Security & Lineage | 4 | 0 | 4 | 0 | 0 | 0 |
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 3 | 0 | 0 | 0 | 0 | 3 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 0 | 0 | 5 |
-| | **TOTAL** | **109** | **48** | **6** | **0** | **0** | **55** |
+| | **TOTAL** | **109** | **48** | **29** | **0** | **0** | **32** |
 
 **Verified complete: 48/109 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
@@ -176,7 +176,7 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | FWK-02 | Config loader + validator | Load/validate YAML, environment overlays, clear errors | 📋 TODO | P0 | FWK-01 | Unit tests |
 | FWK-03 | Run context | run_id/batch_id, logging, environment | 📋 TODO | P0 | FWK-02 | Unit tests |
 | FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
-| FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 📋 TODO | P0 | FND-06 | Catalog Explorer screenshot |
+| FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | deployment/unity_catalog_setup.sql (catalog + 10 schemas); not run |
 | FWK-06 | Packaging | Build wheel, install on cluster, import test | 📋 TODO | P1 | FWK-02 | `import edap_framework` on both workspaces |
 
 ---
@@ -204,12 +204,12 @@ _DQX-based declarative checks from YAML with quarantine._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| DQ-01 | DQ wrapper | Framework function reads dq_rules YAML and applies DQX | 📋 TODO | P0 | FND-10, FWK-01 | Unit + integration test |
-| DQ-02 | Bronze rules | Technical checks per spec | 📋 TODO | P0 | DQ-01 | Results table populated |
-| DQ-03 | Silver rules | Business/referential checks | 📋 TODO | P0 | DQ-01 | Results table populated |
-| DQ-04 | Quarantine tables | bronze_invalid, silver_invalid with reasons | 📋 TODO | P0 | DQ-01 | Bad file rows land in quarantine |
-| DQ-05 | DQ metrics | Rule-level counts and pass/fail summary | 📋 TODO | P1 | DQ-01 | monitoring.dq_summary |
-| DQ-06 | Remediation + reprocess | Fix and reprocess a quarantined file/record | 📋 TODO | P0 | DQ-04 | Before/after evidence |
+| DQ-01 | DQ wrapper | Framework function reads dq_rules YAML and applies DQX | 🔄 BUILT, NOT VALIDATED | P0 | FND-10, FWK-01 | edap_framework/dq/engine.py: DQX apply_checks_by_metadata, quarantine + results + summary writers; rule sets in definitions/dq_rules/; not run |
+| DQ-02 | Bronze rules | Technical checks per spec | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | definitions/dq_rules/bronze/*.yml (9 rule sets) + dq/bronze_check.py + runners/dq_bronze.py; not run |
+| DQ-03 | Silver rules | Business/referential checks | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | definitions/dq_rules/silver/*.yml (8 rule sets incl. referential flags from mapping lookups); not run |
+| DQ-04 | Quarantine tables | bronze_invalid, silver_invalid with reasons | 🔄 BUILT, NOT VALIDATED | P0 | DQ-01 | edap.quarantine.bronze_invalid / silver_invalid written by the engine with failed_rules, record_json, status; not run |
+| DQ-05 | DQ metrics | Rule-level counts and pass/fail summary | 🔄 BUILT, NOT VALIDATED | P1 | DQ-01 | monitoring.dq_results (per rule, incl. zero-failure rules) and monitoring.dq_summary (pass rate) written per run; not run |
+| DQ-06 | Remediation + reprocess | Fix and reprocess a quarantined file/record | 🔄 BUILT, NOT VALIDATED | P0 | DQ-04 | dq/quarantine.py close_superseded_by_resend + Silver MERGE on file version; before/after evidence needs a run |
 
 ---
 
@@ -219,12 +219,12 @@ _Seven canonical entities driven by mapping YAML._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| SLV-01 | Mapping engine | Source-to-canonical via YAML (rename, cast, lookup, derive) | 📋 TODO | P0 | FWK-01 | Unit tests |
-| SLV-02 | Canonical entities | Trade, Instrument, Portfolio, Position, Counterparty, Account, Market Data | 📋 TODO | P0 | SLV-01, BRZ-05 | 7 tables with contract tests |
-| SLV-03 | Reference data | Currency, status, country etc., versioned, effective dates | 📋 TODO | P0 | FWK-05 | Lookups used by Silver |
-| SLV-04 | Key resolution & dedup | Business-key handling, duplicate events/files | 📋 TODO | P0 | SLV-02 | Duplicate test case |
-| SLV-05 | Late-arriving/updated records | Merge logic for incremental updates | 📋 TODO | P0 | SLV-02, SQL-09 | Late update reflected |
-| SLV-06 | Lineage columns | Source references retained in canonical records | 📋 TODO | P1 | SLV-02 | Trace one record end to end |
+| SLV-01 | Mapping engine | Source-to-canonical via YAML (rename, cast, lookup, derive) | 🔄 BUILT, NOT VALIDATED | P0 | FWK-01 | silver/engine.py + definitions/mappings/*.yml (columns, lookups, dedup, merge in YAML); not run |
+| SLV-02 | Canonical entities | Trade, Instrument, Portfolio, Position, Counterparty, Account, Market Data | 🔄 BUILT, NOT VALIDATED | P0 | SLV-01, BRZ-05 | 8 mappings: instrument, portfolio, counterparty, account, trade, position, market_data (+ trade_event); not run |
+| SLV-03 | Reference data | Currency, status, country etc., versioned, effective dates | 🔄 BUILT, NOT VALIDATED | P0 | FWK-05 | definitions/reference_data/*.yml (5 code lists with effective dates/version/owner) + silver/reference.py; not run |
+| SLV-04 | Key resolution & dedup | Business-key handling, duplicate events/files | 🔄 BUILT, NOT VALIDATED | P0 | SLV-02 | dedup window per business key in each mapping; quarantined Bronze rows excluded by _row_hash; not run |
+| SLV-05 | Late-arriving/updated records | Merge logic for incremental updates | 🔄 BUILT, NOT VALIDATED | P0 | SLV-02, SQL-09 | MERGE update_when guards (newer source ts / file version wins; events immutable); not run |
+| SLV-06 | Lineage columns | Source references retained in canonical records | 🔄 BUILT, NOT VALIDATED | P1 | SLV-02 | _bronze_file/_bronze_batch_id/_landing_batch_id/_bronze_row_hash/_silver_batch_id/_run_id/_spec_path on Silver; governance trace_record; not run |
 
 ---
 
@@ -234,12 +234,12 @@ _Four reusable products defined in YAML._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| GLD-01 | Product builder | Join/measure/aggregate from product YAML | 📋 TODO | P0 | SLV-02 | Unit tests |
-| GLD-02 | Trade Analytics | Reusable trade product | 📋 TODO | P0 | GLD-01 | Grain + measures documented |
-| GLD-03 | Position & Exposure (with FX) | Market value converted to a common currency | 📋 TODO | P0 | GLD-01, BRZ-04 | Totals reconcile |
-| GLD-04 | P&L / Finance | Finance product | 📋 TODO | P1 | GLD-01 | Documented |
-| GLD-05 | Regulatory/Management | Controlled reporting product | 📋 TODO | P1 | GLD-01 | Documented |
-| GLD-06 | Product documentation | Purpose, grain, owner, consumers, refresh | 📋 TODO | P1 | GLD-02 | Catalog comments set |
+| GLD-01 | Product builder | Join/measure/aggregate from product YAML | 🔄 BUILT, NOT VALIDATED | P0 | SLV-02 | gold/builder.py composes SQL from product YAML (CTEs, joins, dimensions, measures, parameters); compose checked offline, not run |
+| GLD-02 | Trade Analytics | Reusable trade product | 🔄 BUILT, NOT VALIDATED | P0 | GLD-01 | definitions/gold_products/trade_analytics.yml (grain: trade) |
+| GLD-03 | Position & Exposure (with FX) | Market value converted to a common currency | 🔄 BUILT, NOT VALIDATED | P0 | GLD-01, BRZ-04 | definitions/gold_products/position_exposure.yml + conformed fx_rate_daily (USD conversion); totals reconciliation needs a run |
+| GLD-04 | P&L / Finance | Finance product | 🔄 BUILT, NOT VALIDATED | P1 | GLD-01 | definitions/gold_products/pnl_finance.yml |
+| GLD-05 | Regulatory/Management | Controlled reporting product | 🔄 BUILT, NOT VALIDATED | P1 | GLD-01 | definitions/gold_products/regulatory_reporting.yml (parameterised threshold, versioned) |
+| GLD-06 | Product documentation | Purpose, grain, owner, consumers, refresh | 🔄 BUILT, NOT VALIDATED | P1 | GLD-02 | documentation block in every product YAML applied as UC comment/tags; docs/architecture/silver_dq_gold_governance.md |
 
 ---
 
@@ -287,10 +287,10 @@ _Controls demonstrated, not just documented._
 
 | ID | Task | Description | Status | Priority | Dependencies | Evidence |
 |----|------|-------------|--------|----------|--------------|----------|
-| GOV-01 | Ownership, descriptions, tags | UC comments/tags on key objects | 📋 TODO | P1 | FWK-05 | Catalog Explorer |
-| GOV-02 | Access control | Personas/groups + grants; one denied-access demo | 📋 TODO | P0 | FWK-05 | Grant + denied query |
-| GOV-03 | Lineage | End-to-end UC lineage screenshot | 📋 TODO | P0 | GLD-02 | Screenshot |
-| GOV-04 | Sensitive-column masking | One masked column | 📋 TODO | P2 | GOV-02 | Query as restricted user |
+| GOV-01 | Ownership, descriptions, tags | UC comments/tags on key objects | 🔄 BUILT, NOT VALIDATED | P1 | FWK-05 | definitions/governance/ownership.yml + governance/apply.py apply_ownership (catalog + 10 schemas) and table tags in loaders; not run |
+| GOV-02 | Access control | Personas/groups + grants; one denied-access demo | 🔄 BUILT, NOT VALIDATED | P0 | FWK-05 | definitions/governance/access.yml (4 personas, grants, denied-access demo) + apply_grants; groups must exist at account level; not run |
+| GOV-03 | Lineage | End-to-end UC lineage screenshot | 🔄 BUILT, NOT VALIDATED | P0 | GLD-02 | apply.lineage_report (system.access.table_lineage -> edap.monitoring.lineage_paths); screenshot needs a run |
+| GOV-04 | Sensitive-column masking | One masked column | 🔄 BUILT, NOT VALIDATED | P2 | GOV-02 | definitions/governance/masking.yml (LEI mask) + apply_masks; not run |
 
 ---
 

@@ -1,0 +1,35 @@
+# Canonical mapping: Bronze (sql_counterparties) -> Silver counterparty. Edit expressions/lookups here; the Silver engine has no entity-specific code.
+version: 1
+entity: counterparty
+layer: silver
+depends_on: [reference]
+target: {catalog: edap, schema: silver, table: counterparty}
+business_key: [counterparty_id]
+source:
+  bronze_table: edap.bronze.sql_counterparties
+  exclude_quarantined: true          # rows DQ quarantined at Bronze never reach Silver
+
+governance:
+  description: "Canonical Counterparty; credit rating enriched with rating grade from reference data"
+  owner: risk-data-owner
+  sensitivity: synthetic
+columns:
+  counterparty_id: "upper(trim(cpty_code))"
+  counterparty_name: "trim(cpty_name)"
+  counterparty_type: "upper(trim(cpty_type))"
+  country_code: "upper(trim(country))"
+  risk_category: "upper(trim(risk_category))"
+  credit_rating: "upper(trim(credit_rating))"
+  legal_entity_identifier: "trim(lei)"
+  is_active: "is_active"
+  source_created_ts: "created_ts"
+  source_updated_ts: "last_updated_ts"
+lookups:
+  - {table: edap.reference.counterparty_rating, active_only: true, on: {credit_rating: code}, add: {rating_grade: rating_grade, investment_grade: investment_grade}}
+dedup:
+  partition_by: [counterparty_id]
+  order_by: ["source_updated_ts DESC", "_ingest_ts DESC"]
+merge:
+  keys: [counterparty_id]
+  update_when: "s.source_updated_ts >= t.source_updated_ts"
+dq: {rules_file: definitions/dq_rules/silver/counterparty.yml}

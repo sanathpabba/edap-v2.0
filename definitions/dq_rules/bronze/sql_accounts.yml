@@ -1,0 +1,49 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: bronze.sql_accounts
+layer: bronze
+target_table: edap.bronze.sql_accounts
+mode: quarantine
+description: Technical checks on raw account rows
+checks:
+- name: acct_ref_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: acct_ref
+- name: acct_ref_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: acct_ref
+      regex: ^ACC\d{5}$
+- name: acct_ref_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - acct_ref
+- name: book_cd_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: book_cd
+      regex: ^PORT\d{4}$
+- name: ccy_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: ccy
+      regex: ^[A-Z]{3}$
+- name: last_updated_ts_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: last_updated_ts

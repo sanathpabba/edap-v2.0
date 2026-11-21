@@ -1,0 +1,58 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: silver.instrument
+layer: silver
+target_table: edap.silver.instrument
+mode: quarantine
+description: Enterprise rules for Instrument
+checks:
+- name: instrument_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: instrument_id
+- name: instrument_id_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: instrument_id
+      regex: ^INST\d{5}$
+- name: instrument_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - instrument_id
+- name: asset_class_not_null
+  criticality: asset_class_unmapped
+  check:
+    function: is_not_null
+    arguments:
+      column: asset_class
+- name: currency_approved
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: currency
+      allowed:
+      - '''USD'''
+      - '''EUR'''
+      - '''GBP'''
+      - '''JPY'''
+      - '''CHF'''
+      - '''AUD'''
+      - '''CAD'''
+      - '''SGD'''
+      - '''HKD'''
+- name: contract_size_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: contract_size > 0
+      msg: contract_size must be > 0

@@ -1,0 +1,9 @@
+# Lineage reporting. Table and column lineage itself is captured automatically by Unity Catalog (system.access.*_lineage);
+# this file says which end-to-end paths to report and which record traces to demonstrate.
+products: [edap.gold.trade_analytics, edap.gold.position_exposure, edap.gold.pnl_finance, edap.gold.regulatory_reporting]
+max_depth: 6
+report_table: edap.monitoring.lineage_paths
+record_trace:
+  trade:    {silver_table: edap.silver.trade,    key: trade_id,    bronze_table: edap.bronze.sql_trades}
+  position: {silver_table: edap.silver.position, key: position_id, bronze_table: edap.bronze.file_positions}
+  event:    {silver_table: edap.silver.trade_event, key: event_id, bronze_table: edap.bronze.stream_trade_events}

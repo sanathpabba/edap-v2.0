@@ -1,0 +1,47 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: silver.trade_event
+layer: silver
+target_table: edap.silver.trade_event
+mode: quarantine
+description: Enterprise rules for Trade Event
+checks:
+- name: event_id_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: event_id
+- name: event_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - event_id
+- name: trade_resolves
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: _ref_trade_ok
+      msg: event references a trade that does not exist (yet)
+- name: event_type_canonical
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: event_type
+      allowed:
+      - '''TRADE_EXECUTED'''
+      - '''TRADE_AMENDED'''
+      - '''TRADE_CANCELLED'''
+      - '''TRADE_SETTLED'''
+      - '''TRADE_FAILED'''
+- name: event_ts_not_null
+  criticality: error
+  check:
+    function: is_not_null
+    arguments:
+      column: event_ts

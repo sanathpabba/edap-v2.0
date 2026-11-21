@@ -1,0 +1,17 @@
+reference: country_region
+version: 1
+owner: reference-data-owner
+source: ISO 3166 with EDAP regional grouping
+description: Country to reporting region
+effective_from: "2024-01-01"
+columns: {code: string, country_name: string, region: string}
+rows:
+  - {code: US, country_name: United States, region: AMERICAS}
+  - {code: CA, country_name: Canada, region: AMERICAS}
+  - {code: GB, country_name: United Kingdom, region: EMEA}
+  - {code: DE, country_name: Germany, region: EMEA}
+  - {code: CH, country_name: Switzerland, region: EMEA}
+  - {code: JP, country_name: Japan, region: APAC}
+  - {code: HK, country_name: Hong Kong, region: APAC}
+  - {code: SG, country_name: Singapore, region: APAC}
+  - {code: AU, country_name: Australia, region: APAC}

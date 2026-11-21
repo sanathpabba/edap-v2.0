@@ -1,0 +1,16 @@
+# Ownership, descriptions and classification for catalog objects. Applied as Unity Catalog comments + tags.
+catalog:
+  name: edap
+  comment: "EDAP 2.0 - Enterprise Data Analytical Platform (synthetic capital-markets data)"
+  tags: {project: edap-2.0, data_classification: synthetic}
+schemas:
+  landing:     {comment: "Raw files exactly as received from sources (volumes/external storage)", owner: platform-engineering, layer: landing}
+  bronze:      {comment: "Raw append-only Delta copies with audit and lineage columns", owner: platform-engineering, layer: bronze}
+  silver:      {comment: "Canonical, deduplicated, validated enterprise entities", owner: data-architecture, layer: silver}
+  gold:        {comment: "Reusable business data products", owner: data-product-owners, layer: gold}
+  consumption: {comment: "Consumer-specific serving objects over Gold", owner: data-product-owners, layer: consumption}
+  reference:   {comment: "Governed reference data with effective dates and versions", owner: reference-data-owner, layer: reference}
+  metadata:    {comment: "Framework control tables (watermarks, rule registry)", owner: platform-engineering, layer: metadata}
+  quarantine:  {comment: "Rows rejected by data quality rules, with reasons and remediation status", owner: data-quality-lead, layer: quarantine}
+  monitoring:  {comment: "Data quality results and summaries", owner: data-quality-lead, layer: monitoring}
+  audit:       {comment: "Pipeline run log and file registry", owner: platform-engineering, layer: audit}

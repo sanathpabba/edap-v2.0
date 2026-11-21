@@ -1,0 +1,13 @@
+reference: instrument_classification
+version: 1
+owner: reference-data-owner
+source: EDAP instrument classification standard
+description: Maps source security type to enterprise asset class and reporting group
+effective_from: "2024-01-01"
+columns: {code: string, asset_class: string, reporting_group: string, description: string}
+rows:
+  - {code: EQUITY, asset_class: Equity, reporting_group: Cash Securities, description: Listed equities}
+  - {code: BOND, asset_class: Fixed Income, reporting_group: Cash Securities, description: Government and corporate bonds}
+  - {code: FX, asset_class: Foreign Exchange, reporting_group: Currency, description: FX spot and forwards}
+  - {code: COMMODITY, asset_class: Commodity, reporting_group: Futures, description: Commodity futures}
+  - {code: DERIVATIVE, asset_class: Derivative, reporting_group: Listed Derivatives, description: Options and other derivatives}

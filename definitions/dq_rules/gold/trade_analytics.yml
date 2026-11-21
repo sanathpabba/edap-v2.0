@@ -1,0 +1,30 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: gold.trade_analytics
+layer: gold
+target_table: edap.gold.trade_analytics
+mode: flag
+description: 'Gold expectations: one row per trade, amounts reconcile'
+checks:
+- name: trade_id_unique
+  criticality: error
+  check:
+    function: is_unique
+    arguments:
+      columns:
+      - trade_id
+- name: usd_amount_resolved
+  criticality: warn
+  check:
+    function: sql_expression
+    arguments:
+      expression: gross_amount_usd IS NOT NULL
+      msg: FX rate missing, USD amount not computed
+- name: net_consistent
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: abs(net_amount - (gross_amount + CASE WHEN side='BUY' THEN commission + fees ELSE -(commission + fees) END)) < 0.05
+      msg: net amount does not reconcile to gross +/- costs

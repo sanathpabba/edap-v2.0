@@ -1,0 +1,70 @@
+# DQX rule set (declarative). Edit/add checks here; no code change needed.
+# criticality: error = row quarantined, warn = row passes and the warning is recorded.
+version: 1
+rule_set: bronze.stream_trade_events
+layer: bronze
+target_table: edap.bronze.stream_trade_events
+mode: quarantine
+description: Technical checks on raw events; not-JSON, missing trade_id, bad timestamp, negative quantity and unknown event type are caught here
+checks:
+- name: event_id_not_null
+  criticality: unparseable_or_missing_event_id
+  check:
+    function: is_not_null
+    arguments:
+      column: event_id
+- name: event_id_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: event_id
+      regex: ^EVT\d{8}$
+- name: trade_id_not_null
+  criticality: missing_trade_id
+  check:
+    function: is_not_null
+    arguments:
+      column: trade_id
+- name: trade_id_format
+  criticality: error
+  check:
+    function: regex_match
+    arguments:
+      column: trade_id
+      regex: ^TRD\d{7}$
+- name: timestamp_valid
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: try_to_timestamp(event_timestamp) IS NOT NULL
+      msg: event_timestamp missing or not ISO-8601
+- name: quantity_positive
+  criticality: error
+  check:
+    function: sql_expression
+    arguments:
+      expression: quantity IS NOT NULL AND quantity > 0
+      msg: quantity missing or not positive
+- name: unknown_event_type
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: event_type
+      allowed:
+      - '''TRADE_EXECUTED'''
+      - '''TRADE_AMENDED'''
+      - '''TRADE_CANCELLED'''
+      - '''TRADE_SETTLED'''
+      - '''TRADE_FAILED'''
+- name: trade_type_allowed
+  criticality: error
+  check:
+    function: is_in_list
+    arguments:
+      column: trade_type
+      allowed:
+      - '''BUY'''
+      - '''SELL'''
