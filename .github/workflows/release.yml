@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04      # pinned: ubuntu-latest moved to 26.04, which has no Python 3.9 build
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -54,7 +54,7 @@ jobs:
   deploy:
     needs: build
     if: ${{ github.event.inputs.deploy_target != '' }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04      # pinned: ubuntu-latest moved to 26.04, which has no Python 3.9 build
     environment: databricks-${{ github.event.inputs.deploy_target }}     # configure required reviewers on this environment
     env:
       DATABRICKS_HOST: ${{ secrets.DATABRICKS_HOST }}                      # secrets live in GitHub, never in the repository
