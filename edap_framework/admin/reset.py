@@ -10,6 +10,8 @@ from edap_framework.core import config
 
 PURGE_SCHEMAS = ["bronze", "silver", "gold", "consumption", "quarantine"]
 PURGE_TABLES = {"monitoring": ["dq_results", "dq_summary", "notifications"], "audit": ["ingestion_runs", "file_arrivals"], "metadata": ["watermarks"]}
+# hidden objects Databricks creates for every materialized view; they are dropped together with the view and cannot be dropped on their own
+INTERNAL_PREFIXES = ("__materialization_", "event_log_")
 DELETE_PATHS = [("landing", "sql"), ("landing", "events"), ("landing", "fx_rates"), ("landing", "positions"), ("landing", "_checkpoints"), ("bronze", "_checkpoints")]
 
 
@@ -33,6 +35,8 @@ def plan(spark, env):
     rows = spark.sql("SELECT table_schema, table_name, table_type FROM %s.information_schema.tables WHERE table_schema IN (%s)"
                      % (cat, ",".join("'%s'" % s for s in wanted))).collect()
     for r in rows:
+        if r["table_name"].startswith(INTERNAL_PREFIXES):
+            continue
         keep_only = wanted[r["table_schema"]]
         if keep_only is not None and r["table_name"] not in keep_only:
             continue                                                         # e.g. nothing else in monitoring/audit/metadata is touched

@@ -30,3 +30,10 @@ checks:
     arguments:
       expression: abs(portfolio_weight) <= 1.0
       msg: exposure weight outside [-1, 1]
+- name: value_close_to_cost
+  criticality: warn
+  check:
+    function: sql_expression
+    arguments:
+      expression: cost_basis_usd IS NULL OR abs(market_value_usd - cost_basis_usd) <= abs(cost_basis_usd)
+      msg: 'market value differs from cost by more than 100%: unit or contract-size mismatch?'

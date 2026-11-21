@@ -34,7 +34,7 @@ select:
     avg_cost: "s.avg_cost"
     market_value: "s.market_value"
     market_value_usd: "round(s.market_value * f.usd_per_unit, 2)"
-    cost_basis_usd: "round(s.quantity * s.avg_cost * f.usd_per_unit, 2)"
+    cost_basis_usd: "round(s.quantity * s.avg_cost * i.contract_size * f.usd_per_unit, 2)"
     portfolio_weight: "round(s.market_value * f.usd_per_unit / nullif(sum(abs(s.market_value * f.usd_per_unit)) OVER (PARTITION BY s.position_date, s.portfolio_id), 0), 6)"
     source_file_version: "s.source_file_version"
     _silver_batch_id: "s._silver_batch_id"

@@ -9,6 +9,7 @@ ROWS = [("bronze", "equities_sql_trades", "MANAGED"), ("silver", "common_portfol
         ("consumption", "fx_trade_metrics", "VIEW"), ("consumption", "fx_trade_daily_mv", "MATERIALIZED_VIEW"), ("quarantine", "bronze_invalid", "MANAGED"),
         ("monitoring", "dq_results", "MANAGED"), ("monitoring", "some_other_table", "MANAGED"), ("audit", "ingestion_runs", "MANAGED"), ("audit", "file_arrivals", "MANAGED"),
         ("metadata", "watermarks", "MANAGED"), ("metadata", "other_metadata", "MANAGED"),
+        ("consumption", "__materialization_mat_1_fx_trade_daily_mv_1", "MANAGED"), ("consumption", "event_log_abc", "MANAGED"),
         ("reference", "currency", "MANAGED"), ("governance", "mask_lei", "MANAGED")]
 
 
@@ -83,3 +84,9 @@ def test_confirmed_reset_executes_and_reports_failures_without_stopping():
     out = reset.reset_platform(s, d, ENV, confirm=True, log=lambda *_: None)
     assert out["executed"] and out["dropped"] == len(out["drop"]) - 1 and len(out["failed"]) == 1 and "common_portfolio" in out["failed"][0]
     assert len(s.statements) == len(out["drop"]) and len(d.fs.removed) == 4         # the two missing _checkpoints folders count as already clean
+
+
+def test_hidden_materialized_view_internals_are_left_to_their_view():
+    names = {fq for _, fq in reset.plan(FakeSpark(), ENV)["drop"]}
+    assert "edap.consumption.fx_trade_daily_mv" in names
+    assert not any("__materialization_" in n or "event_log_" in n for n in names)

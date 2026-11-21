@@ -14,7 +14,7 @@ documentation:
   intended_consumers: [Finance, Management reporting]
 with:
   - name: pos
-    sql: "SELECT s.position_date, s.portfolio_id, sum(s.market_value * f.usd_per_unit) AS mv, sum(s.quantity * s.avg_cost * f.usd_per_unit) AS cost FROM edap.silver.${ac}_position s LEFT JOIN edap.gold.common_fx_rate_daily f ON f.rate_date = s.position_date AND f.currency = s.currency GROUP BY s.position_date, s.portfolio_id"
+    sql: "SELECT s.position_date, s.portfolio_id, sum(s.market_value * f.usd_per_unit) AS mv, sum(s.quantity * s.avg_cost * i.contract_size * f.usd_per_unit) AS cost FROM edap.silver.${ac}_position s LEFT JOIN edap.silver.${ac}_instrument i ON i.instrument_id = s.instrument_id LEFT JOIN edap.gold.common_fx_rate_daily f ON f.rate_date = s.position_date AND f.currency = s.currency GROUP BY s.position_date, s.portfolio_id"
   - name: costs
     sql: "SELECT t.trade_date AS position_date, t.portfolio_id, sum((t.commission + t.fees) * f.usd_per_unit) AS trading_costs, count(*) AS trade_count FROM edap.silver.${ac}_trade t LEFT JOIN edap.gold.common_fx_rate_daily f ON f.rate_date = t.trade_date AND f.currency = t.currency WHERE t.trade_status <> 'CANCELLED' GROUP BY t.trade_date, t.portfolio_id"
 from: {table: pos, alias: pos}
