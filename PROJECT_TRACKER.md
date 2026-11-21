@@ -23,7 +23,7 @@
 | 3 | Source 3 - Streaming Trade Events | 7 | 7 | 0 | 0 | 0 | 0 |
 | 4 | Source 4 - REST FX Rates | 5 | 5 | 0 | 0 | 0 | 0 |
 | 5 | Source Systems Demo Pack | 6 | 5 | 0 | 0 | 0 | 1 |
-| 6 | YAML Specification & Framework Core | 9 | 1 | 6 | 0 | 0 | 2 |
+| 6 | YAML Specification & Framework Core | 9 | 2 | 5 | 0 | 0 | 2 |
 | 7 | Landing & Bronze (metadata-driven) | 9 | 0 | 7 | 0 | 0 | 2 |
 | 8 | Data Quality (DQX) - Bronze & Silver | 9 | 0 | 9 | 0 | 0 | 0 |
 | 9 | Silver - Canonical Model & Reference Data | 6 | 0 | 6 | 0 | 0 | 0 |
@@ -35,9 +35,9 @@
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 4 | 0 | 3 | 0 | 0 | 1 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 2 | 0 | 0 | 3 |
-| | **TOTAL** | **117** | **49** | **46** | **0** | **0** | **22** |
+| | **TOTAL** | **117** | **50** | **45** | **0** | **0** | **22** |
 
-**Verified complete: 49/117 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
+**Verified complete: 50/117 tasks.** (Phases 0-5 verified 2026-11-20/21 except SRC-06 evidence capture. Landing/Bronze code is written but deliberately not yet validated.)
 
 ## Demo scenario this plan builds toward
 
@@ -176,7 +176,7 @@ _Define the YAML contracts and the core of the modular PySpark framework._
 | FWK-02 | Config loader + validator | Load/validate YAML, environment overlays, clear errors | 🔄 BUILT, NOT VALIDATED | P0 | FWK-01 | edap_framework/core/config.py (strict-bool YAML loader) + core/validator.py + runners/validate_definitions.py: 0 errors across 63 YAML files; 15 offline unit tests pass incl. 7 negative cases; environment overlays still to do |
 | FWK-03 | Run context | run_id/batch_id, logging, environment | 📋 TODO | P0 | FWK-02 | Unit tests |
 | FWK-04 | Metadata/control tables | Source registry, watermark store, run log (UC tables) | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | Watermark store + run-log helpers written (edap_framework/metadata/watermarks.py, core/audit.py); tables not yet created |
-| FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | 🔄 BUILT, NOT VALIDATED | P0 | FND-06 | deployment/unity_catalog_setup.sql (catalog + 10 schemas); not run |
+| FWK-05 | Unity Catalog setup | Catalog, schemas, volumes, external locations via script/bundle | ✅ DONE | P0 | FND-06 | Verified 2026-11-21 on v2-0: catalog edap (managed location metadata/edap) + 11 schemas (bronze/silver/gold/consumption with own managed locations), external location edap_sourcedrop (validated), volume edap.metadata.artifacts; serverless probe: managed table create/write/read/drop OK in all 11 schemas, file read/write/delete OK on all 7 external locations; 1.0 catalogs untouched; deployment/unity_catalog_setup.sql records the exact setup |
 | FWK-06 | Packaging | Build wheel, install on cluster, import test | ✅ DONE | P1 | FWK-02 | Verified 2026-11-21 on the v2-0 workspace, serverless run 583500772620803: wheel installed from a workspace file; package 0.1.0 on Python 3.12.3 / Spark 4.2.0; bundled definitions found; edap-validate logic 0 errors; edap-run and edap-validate commands present; all 4 step modules import against real pyspark; DQX 0.17.2 engine imports. (Classic cluster not available: Free Trial 4 vCPU quota / capacity; serverless is the target.) |
 | FWK-07 | Asset-class pipeline structure | pipelines/<AssetClass>/<layer>/<table>/<Routine|Adhoc>/ (one folder per table) for Equities, FixedIncome, FX, Commodities plus Common (landing + shared entities); asset-class YAMLs; ${ac} templating; routing by instrument | 🔄 BUILT, NOT VALIDATED | P0 | FWK-02 | definitions/asset_classes/*.yml, pipelines/ (1,190 step files, one folder per table), docs/architecture/pipelines.md; 75 offline tests incl. routing/overlap/negative cases; not run on Databricks |
 | FWK-08 | Ordinal step files + sequence runner | 8-10 numbered step files per table and mode, each calling one framework function; pipelines/run.py executes them in order per item; dry-run plan; tools/generate_pipelines.py regenerates the tree | 🔄 BUILT, NOT VALIDATED | P0 | FWK-07 | edap_framework/pipeline/{context,sequence,landing_steps,bronze_steps,silver_steps,gold_steps}.py; dry-run and step-wiring tests pass offline; not run on Databricks |

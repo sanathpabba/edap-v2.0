@@ -14,3 +14,4 @@ schemas:
   quarantine:  {comment: "Rows rejected by data quality rules, with reasons and remediation status", owner: data-quality-lead, layer: quarantine}
   monitoring:  {comment: "Data quality results and summaries", owner: data-quality-lead, layer: monitoring}
   audit:       {comment: "Pipeline run log and file registry", owner: platform-engineering, layer: audit}
+  governance:  {comment: "Column-mask functions and other governance objects", owner: platform-engineering, layer: governance}
