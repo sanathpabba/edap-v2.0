@@ -17,7 +17,7 @@
 
 | Phase | Name | Tasks | Done | Rework | Blocked | Todo |
 |---|---|---|---|---|---|---|
-| 0 | Foundation & Decisions | 12 | 10 | 0 | 1 | 1 |
+| 0 | Foundation & Decisions | 12 | 11 | 0 | 0 | 1 |
 | 1 | Source 1 - Azure SQL (initial + incremental) | 12 | 0 | 1 | 0 | 11 |
 | 2 | Source 2 - Position Files (good + bad) | 7 | 0 | 0 | 0 | 7 |
 | 3 | Source 3 - Streaming Trade Events | 7 | 0 | 0 | 0 | 7 |
@@ -35,9 +35,9 @@
 | 15 | Reconciliation & Testing | 5 | 0 | 0 | 0 | 5 |
 | 16 | Deployment | 3 | 0 | 0 | 0 | 3 |
 | 17 | Dissertation Evidence & Viva Demo | 5 | 0 | 0 | 0 | 5 |
-| | **TOTAL** | **109** | **10** | **1** | **1** | **97** |
+| | **TOTAL** | **109** | **11** | **1** | **0** | **97** |
 
-**Verified complete: 10/109 tasks.** (Phase 0 verified 2026-11-20; one task is blocked on the user.)
+**Verified complete: 11/109 tasks.** (Phase 0 verified 2026-11-20; one task is blocked on the user.)
 
 ## Demo scenario this plan builds toward
 
@@ -76,7 +76,7 @@ _Lock the decisions and environment everything else depends on._
 | FND-05 | Master ID standard | One ID format for all sources (adopt SQL: INST00080 / PORT0016 / CPTY0021 / ACC00009 / TRD0000001) | ✅ DONE | P0 | - | docs/architecture/decisions.md (D1): SQL ID format is the master standard |
 | FND-06 | Catalog & schema naming | Decide catalog name (edip vs edap) and schema list; settle Platinum vs Consumption | ✅ DONE | P0 | - | decisions.md (D2): catalog 'edap' (free; 1.0 'edap_prod' untouched), Consumption layer, 10 schemas; metastore shared by both workspaces |
 | FND-07 | Secrets handling | Move SQL password, EH connection string, tokens to Key Vault / Databricks secret scope; remove plaintext from env files and notebooks | ✅ DONE | P0 | FND-04 | 8 secrets in Key Vault edap-kv-b777d5; Databricks scope 'edap-kv' (Azure-backed) verified listing 8 keys; read test in job returned secret; plaintext env files removed; password redacted from docs |
-| FND-08 | Revoke exposed Databricks token | PAT 'bits-token' (id d13883b3b1) was pasted in chat history. v1/v2 now have OAuth profiles, so no PAT is needed | ⏸️ BLOCKED | P0 | FND-04 | Waiting on user: revoke PAT + remove token from .databrickscfg DEFAULT + delete chat.json |
+| FND-08 | Revoke exposed Databricks token | PAT 'bits-token' was pasted in chat history; replaced by OAuth profiles | ✅ DONE | P0 | FND-04 | User revoked PAT ( empty); DEFAULT/v1/v2 all authenticate via OAuth; no token lines in .databrickscfg. Remaining: chat.json still holds the (now dead) token - git-ignored |
 | FND-12 | Rotate SQL admin password & Event Hubs root key | Both appeared in plaintext in 1.0 files/chat; rotate and update Key Vault (breaks 1.0 notebooks - acceptable) | 📋 TODO | P1 | FND-07 | New secret versions in Key Vault; old values rejected |
 | FND-09 | Git repo for 2.0 | Initialise repo, .gitignore, connect remote, first commit | ✅ DONE | P1 | - | git repo on main, commit c6e6e1a; .gitignore excludes .databrickscfg, config/*.env, chat.json; secret scan clean |
 | FND-10 | DQX feasibility | Install databricks-labs-dqx on v2-0 runtime; run one YAML check end-to-end | ✅ DONE | P0 | FND-04 | Serverless job on v2-0: DQX 0.17.2 installs; YAML rules via apply_checks_by_metadata_and_split -> 3 valid / 4 quarantined of 5; is_in_list needs quoted literals or sql_expression; warn rows appear in both outputs |
